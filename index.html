@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1e3d1a">
+<title>Home Harvest</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── DESIGN TOKENS ── */
+  :root {
+    --green-dark:  #1e3d1a;
+    --green:       #2d5a27;
+    --green-mid:   #4a7c43;
+    --sage:        #a8c5a0;
+    --cream:       #f5f0e8;
+    --warm-white:  #faf8f3;
+    --amber:       #c8851a;
+    --amber-light: #f0b040;
+    --red:         #c0392b;
+    --text:        #1a1a18;
+    --text-muted:  #6b7060;
+    --border:      #d8d4c8;
+    --shadow:      0 2px 12px rgba(30,61,26,0.10);
+    --shadow-lg:   0 8px 32px rgba(30,61,26,0.15);
+    --radius:      14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    display: none;
+    position: fixed; inset: 0;
+    background: var(--green-dark);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    flex-direction: column;
+    text-align: center;
+  }
+  #login-screen.show { display: flex; }
+  .login-logo { font-size: 3.5rem; margin-bottom: 12px; }
+  .login-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: white;
+    margin-bottom: 8px;
+  }
+  .login-sub {
+    color: var(--sage);
+    font-size: 0.95rem;
+    margin-bottom: 48px;
+    line-height: 1.5;
+  }
+  .btn-google {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    color: #333;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-google:active { transform: scale(0.97); }
+  .btn-google svg { width: 20px; height: 20px; }
+  .login-note {
+    color: rgba(168,197,160,0.6);
+    font-size: 0.78rem;
+    margin-top: 24px;
+    max-width: 280px;
+    line-height: 1.5;
+  }
+
+  /* ── LOADING OVERLAY ── */
+  #loading-screen {
+    display: none;
+    position: fixed; inset: 0;
+    background: var(--green-dark);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #loading-screen.show { display: flex; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(168,197,160,0.3);
+    border-top-color: var(--sage);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--sage); font-size: 0.9rem; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--green-dark);
+    color: white;
+    padding: 14px 16px 12px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--green-mid);
+    border: 2px solid var(--sage);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 600; color: white;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ── USER MENU ── */
+  .user-menu {
+    display: none;
+    position: fixed; top: 60px; right: 12px;
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 8px;
+    z-index: 200;
+    min-width: 200px;
+  }
+  .user-menu.show { display: block; }
+  .user-menu-name {
+    padding: 8px 12px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .user-menu-email {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .btn-signout {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 10px 12px;
+    text-align: left;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    color: var(--red);
+    cursor: pointer;
+    border-radius: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .btn-signout:hover { background: #fff5f5; }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--green-dark);
+    display: flex;
+    border-top: 1px solid rgba(168,197,160,0.2);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 10px 0 8px;
+    border: none; background: transparent;
+    color: var(--sage);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    gap: 3px;
+    min-height: 56px;
+  }
+  .nav-btn.active { color: var(--amber-light); }
+  .nav-icon { font-size: 1.4rem; line-height: 1; }
+
+  /* ── CONTENT AREA ── */
+  .content { padding: 16px; max-width: 600px; margin: 0 auto; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--green-dark);
+  }
+  .btn-add {
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    min-height: 44px;
+    transition: background 0.2s;
+  }
+  .btn-add:active { background: var(--green-mid); }
+
+  /* ── SEARCH BAR ── */
+  .search-bar {
+    position: relative;
+    margin-bottom: 14px;
+  }
+  .search-bar input {
+    width: 100%;
+    padding: 11px 14px 11px 40px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    background: var(--warm-white);
+    outline: none;
+    min-height: 44px;
+  }
+  .search-bar input:focus { border-color: var(--green-mid); }
+  .search-icon {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted); font-size: 1rem;
+    pointer-events: none;
+  }
+
+  /* ── FILTER CHIPS ── */
+  .filter-row {
+    display: flex; gap: 8px;
+    overflow-x: auto; padding-bottom: 4px;
+    margin-bottom: 14px;
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--warm-white);
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    min-height: 36px;
+  }
+  .filter-chip.active {
+    background: var(--green);
+    border-color: var(--green);
+    color: white;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex; gap: 8px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .stat-chip {
+    background: var(--warm-white);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .stat-chip strong { color: var(--green); }
+
+  /* ── PLANT CARDS ── */
+  .section-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin: 16px 0 8px;
+  }
+  .card {
+    background: var(--warm-white);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(216,212,200,0.6);
+  }
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    color: var(--green-dark);
+    line-height: 1.3;
+  }
+  .card-variety {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .btn-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: var(--cream);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+    transition: background 0.15s;
+  }
+  .btn-icon:active { background: var(--border); }
+  .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .tag {
+    font-size: 0.75rem;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .tag-bed    { background: #e8f0e8; color: var(--green); }
+  .tag-status { background: #fef6e4; color: var(--amber); }
+  .tag-date   { background: #f0f0f0; color: var(--text-muted); }
+  .tag-harvest{ background: #e8f5e9; color: #2e7d32; }
+
+  /* Status badge colors */
+  .status-seedling   { background: #e3f2fd; color: #1565c0; }
+  .status-growing    { background: #e8f5e9; color: #2e7d32; }
+  .status-flowering  { background: #fce4ec; color: #c2185b; }
+  .status-ready      { background: #fff8e1; color: #f57f17; }
+  .status-done       { background: #f5f5f5; color: #757575; }
+
+  .card-notes {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-muted);
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; line-height: 1.6; }
+
+  /* ── SYNC STATUS ── */
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 0.8rem;
+  }
+  .sync-bar.syncing { background: #fff8e1; color: var(--amber); }
+  .sync-bar.synced  { background: #e8f5e9; color: #2e7d32; }
+  .sync-bar.error   { background: #ffebee; color: var(--red); }
+  .sync-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .syncing .sync-dot { background: var(--amber); animation: pulse 1s infinite; }
+  .synced  .sync-dot { background: #2e7d32; }
+  .error   .sync-dot { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 300;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--warm-white);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 32px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle {
+    width: 40px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    color: var(--green-dark);
+    margin-bottom: 20px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    background: white;
+    outline: none;
+    min-height: 44px;
+    color: var(--text);
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--green-mid);
+  }
+  .form-textarea { min-height: 80px; resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+  .btn-primary {
+    flex: 1;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .btn-primary:active { background: var(--green-mid); }
+  .btn-secondary {
+    flex: 1;
+    background: var(--cream);
+    color: var(--text-muted);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .btn-danger {
+    background: #ffebee;
+    color: var(--red);
+    border: 1.5px solid #ffcdd2;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    cursor: pointer;
+    margin-top: 8px;
+    width: 100%;
+    min-height: 44px;
+  }
+
+  /* ── COMING SOON PANELS ── */
+  .coming-soon {
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text-muted);
+  }
+  .coming-soon .icon { font-size: 3rem; margin-bottom: 16px; }
+  .coming-soon h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    color: var(--green-dark);
+    margin-bottom: 8px;
+  }
+  .coming-soon p { font-size: 0.88rem; line-height: 1.6; }
+  .phase-badge {
+    display: inline-block;
+    background: var(--cream);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 12px;
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: var(--green-dark);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    z-index: 500;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen" class="show">
+  <div class="login-logo">🌿</div>
+  <h1 class="login-title">Home Harvest</h1>
+  <p class="login-sub">Your personal garden manager.<br>Sign in to get started.</p>
+  <button class="btn-google" onclick="signIn()">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+    Sign in with Google
+  </button>
+  <p class="login-note">Your garden data is stored in your own Google Sheet — we never store it on our servers.</p>
+</div>
+
+<!-- ── LOADING SCREEN ── -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <p class="loading-text">Loading your garden…</p>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="app" style="display:none;">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>🌿 Home Harvest</h1>
+    </div>
+    <div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">?</div>
+  </div>
+
+  <!-- User menu dropdown -->
+  <div class="user-menu" id="user-menu">
+    <div class="user-menu-name">
+      <div id="menu-name">Loading…</div>
+      <div class="user-menu-email" id="menu-email"></div>
+    </div>
+    <button class="btn-signout" onclick="signOut()">🚪 Sign out</button>
+  </div>
+
+  <!-- Tab panels -->
+  <div class="content">
+
+    <!-- PLANTS PANEL -->
+    <div class="tab-panel active" id="panel-plants">
+      <div class="page-header">
+        <h2 class="page-title">My Garden</h2>
+        <button class="btn-add" onclick="openPlantModal()">＋ Add Plant</button>
+      </div>
+
+      <!-- Sync status -->
+      <div class="sync-bar syncing" id="sync-bar">
+        <div class="sync-dot"></div>
+        <span id="sync-text">Connecting to Google Sheets…</span>
+      </div>
+
+      <!-- Search -->
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="plant-search" placeholder="Search plants…" oninput="renderPlants()">
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar" id="plant-stats"></div>
+
+      <!-- Filter chips -->
+      <div class="filter-row" id="plant-filters"></div>
+
+      <!-- Plant list -->
+      <div id="plant-list"></div>
+    </div>
+
+    <!-- HARVESTS PANEL -->
+    <div class="tab-panel" id="panel-harvests">
+      <div class="coming-soon">
+        <div class="icon">🧺</div>
+        <h3>Harvest Tracking</h3>
+        <p>Log what you pick and see running totals per plant and per season.</p>
+        <div class="phase-badge">Coming in Phase 2</div>
+      </div>
+    </div>
+
+    <!-- TASKS PANEL -->
+    <div class="tab-panel" id="panel-tasks">
+      <div class="coming-soon">
+        <div class="icon">✅</div>
+        <h3>Task List</h3>
+        <p>Garden to-dos with optional due dates synced to Google Calendar.</p>
+        <div class="phase-badge">Coming in Phase 2</div>
+      </div>
+    </div>
+
+    <!-- CARE PANEL -->
+    <div class="tab-panel" id="panel-care">
+      <div class="coming-soon">
+        <div class="icon">💧</div>
+        <h3>Care Schedules</h3>
+        <p>Watering, fertilizing, and pruning schedules with automatic calendar reminders.</p>
+        <div class="phase-badge">Coming in Phase 3</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-plants" onclick="switchTab('plants')">
+      <span class="nav-icon">🌱</span>
+      <span>Plants</span>
+    </button>
+    <button class="nav-btn" id="nav-harvests" onclick="switchTab('harvests')">
+      <span class="nav-icon">🧺</span>
+      <span>Harvests</span>
+    </button>
+    <button class="nav-btn" id="nav-tasks" onclick="switchTab('tasks')">
+      <span class="nav-icon">✅</span>
+      <span>Tasks</span>
+    </button>
+    <button class="nav-btn" id="nav-care" onclick="switchTab('care')">
+      <span class="nav-icon">💧</span>
+      <span>Care</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- ── PLANT MODAL ── -->
+<div class="modal-overlay" id="plant-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" id="plant-modal-title">Add Plant</h2>
+
+    <input type="hidden" id="plant-edit-id">
+
+    <div class="form-group">
+      <label class="form-label">Plant Name *</label>
+      <input class="form-input" id="f-name" type="text" placeholder="e.g. Tomato, Basil, Zucchini">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Variety</label>
+      <input class="form-input" id="f-variety" type="text" placeholder="e.g. Cherry, Sweet Genovese">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Bed / Location</label>
+        <input class="form-input" id="f-bed" type="text" placeholder="e.g. Raised Bed 1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quantity</label>
+        <input class="form-input" id="f-qty" type="text" placeholder="e.g. 3 plants">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Date Planted</label>
+        <input class="form-input" id="f-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="f-status">
+          <option value="">— Select —</option>
+          <option value="Seedling">🌱 Seedling</option>
+          <option value="Growing">🌿 Growing</option>
+          <option value="Flowering">🌸 Flowering</option>
+          <option value="Ready to Harvest">🍅 Ready to Harvest</option>
+          <option value="Done">✓ Done</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Expected Harvest Window</label>
+      <input class="form-input" id="f-harvest" type="text" placeholder="e.g. Late July – August">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea class="form-textarea" id="f-notes" placeholder="Any extra details…"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closePlantModal()">Cancel</button>
+      <button class="btn-primary" onclick="savePlant()">Save Plant</button>
+    </div>
+    <button class="btn-danger" id="btn-delete-plant" onclick="deletePlant()" style="display:none;">Delete Plant</button>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<!-- ── GOOGLE IDENTITY SERVICES ── -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
+
+<script>
+// ════════════════════════════════════════════
+//  CONFIG — Your credentials are set here
+// ════════════════════════════════════════════
+const CLIENT_ID      = '932013390516-br07dkfejb9s49ansfc09upicq7qqrfr.apps.googleusercontent.com';
+const SPREADSHEET_ID = '1ri9vh5w9IrMZk248Qg0EifrLARmrn6tPq22HsyrrNsg';
+const SHEET_NAME     = 'Plants';
+
+// Google API scopes we need
+const SCOPES = [
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/drive'
+].join(' ');
+
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+let accessToken  = null;   // Google OAuth token
+let currentUser  = null;   // { name, email, picture }
+let plants       = [];     // Local copy of Plants sheet data
+let bedFilter    = 'All';  // Active filter chip
+
+// ════════════════════════════════════════════
+//  AUTH — Sign in / out
+// ════════════════════════════════════════════
+
+// Called when the Google Identity Services library loads
+function initGoogleAuth() {
+  // Check if we have a saved token from a previous session
+  const saved = localStorage.getItem('hh_token');
+  const savedUser = localStorage.getItem('hh_user');
+  if (saved && savedUser) {
+    accessToken = saved;
+    currentUser = JSON.parse(savedUser);
+    showApp();
+    loadPlants();
+  } else {
+    showLogin();
+  }
+}
+
+// Trigger the Google OAuth popup
+function signIn() {
+  // Use GIS token client for OAuth 2.0
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (response) => {
+      if (response.error) {
+        showToast('Sign-in failed: ' + response.error);
+        return;
+      }
+      accessToken = response.access_token;
+      // Fetch user profile after getting token
+      fetchUserProfile();
+    }
+  });
+  client.requestAccessToken();
+}
+
+// Get the user's name/email/picture from Google
+async function fetchUserProfile() {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    const data = await res.json();
+    currentUser = { name: data.name, email: data.email, picture: data.picture };
+    // Save to localStorage so we stay logged in on refresh
+    localStorage.setItem('hh_token', accessToken);
+    localStorage.setItem('hh_user', JSON.stringify(currentUser));
+    showApp();
+    loadPlants();
+  } catch (e) {
+    showToast('Could not load profile. Please try again.');
+    showLogin();
+  }
+}
+
+// Sign out and clear all saved state
+function signOut() {
+  google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  currentUser = null;
+  plants = [];
+  localStorage.removeItem('hh_token');
+  localStorage.removeItem('hh_user');
+  closeUserMenu();
+  showLogin();
+}
+
+// ════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ════════════════════════════════════════════
+
+function showLogin() {
+  document.getElementById('login-screen').classList.add('show');
+  document.getElementById('loading-screen').classList.remove('show');
+  document.getElementById('app').style.display = 'none';
+}
+
+function showLoading() {
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('loading-screen').classList.add('show');
+  document.getElementById('app').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('loading-screen').classList.remove('show');
+  document.getElementById('app').style.display = 'block';
+  // Update user avatar and menu
+  if (currentUser) {
+    const avatar = document.getElementById('user-avatar');
+    if (currentUser.picture) {
+      avatar.innerHTML = `<img src="${currentUser.picture}" alt="${currentUser.name}">`;
+    } else {
+      avatar.textContent = currentUser.name.charAt(0).toUpperCase();
+    }
+    document.getElementById('menu-name').textContent = currentUser.name;
+    document.getElementById('menu-email').textContent = currentUser.email;
+  }
+}
+
+// ════════════════════════════════════════════
+//  TAB NAVIGATION
+// ════════════════════════════════════════════
+
+function switchTab(tab) {
+  // Hide all panels and deactivate all nav buttons
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  // Show selected panel and activate its nav button
+  document.getElementById('panel-' + tab).classList.add('active');
+  document.getElementById('nav-' + tab).classList.add('active');
+  // Close user menu if open
+  closeUserMenu();
+}
+
+// ════════════════════════════════════════════
+//  USER MENU
+// ════════════════════════════════════════════
+
+function toggleUserMenu() {
+  document.getElementById('user-menu').classList.toggle('show');
+}
+function closeUserMenu() {
+  document.getElementById('user-menu').classList.remove('show');
+}
+// Close menu when tapping outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#user-avatar') && !e.target.closest('#user-menu')) {
+    closeUserMenu();
+  }
+});
+
+// ════════════════════════════════════════════
+//  GOOGLE SHEETS API — Read & Write
+// ════════════════════════════════════════════
+
+// Helper: make an authenticated request to the Sheets API
+async function sheetsRequest(method, endpoint, body = null) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}${endpoint}`;
+  const options = {
+    method,
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json'
+    }
+  };
+  if (body) options.body = JSON.stringify(body);
+
+  const res = await fetch(url, options);
+
+  // If token expired, prompt re-login
+  if (res.status === 401) {
+    showToast('Session expired — please sign in again.');
+    signOut();
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || 'Sheets API error');
+  }
+  return res.json();
+}
+
+// Load all plants from the Plants sheet
+async function loadPlants() {
+  setSyncStatus('syncing', 'Loading plants…');
+  try {
+    // Read all rows from the Plants tab (skipping the header row 1)
+    const data = await sheetsRequest('GET', `/values/${SHEET_NAME}!A2:I`);
+    const rows = data.values || [];
+
+    // Map each row array to a named object using the column order from our spec:
+    // ID, Name, Variety, Bed, Date Planted, Status, Harvest Window, Notes, Photo URL
+    plants = rows.map(row => ({
+      id:      row[0] || '',
+      name:    row[1] || '',
+      variety: row[2] || '',
+      bed:     row[3] || '',
+      date:    row[4] || '',
+      status:  row[5] || '',
+      harvest: row[6] || '',
+      notes:   row[7] || '',
+      photo:   row[8] || ''
+    })).filter(p => p.id && p.name); // skip empty rows
+
+    setSyncStatus('synced', `Synced · ${plants.length} plant${plants.length !== 1 ? 's' : ''}`);
+    renderPlants();
+  } catch (e) {
+    setSyncStatus('error', 'Could not load — check your connection');
+    console.error(e);
+    // Still render from any cached data
+    renderPlants();
+  }
+}
+
+// Save a new or updated plant back to Google Sheets
+async function savePlantToSheet(plant, isNew) {
+  setSyncStatus('syncing', 'Saving…');
+  try {
+    if (isNew) {
+      // Append a new row at the end of the Plants tab
+      await sheetsRequest('POST', `/values/${SHEET_NAME}!A:I:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
+        values: [[
+          plant.id, plant.name, plant.variety, plant.bed,
+          plant.date, plant.status, plant.harvest, plant.notes, plant.photo
+        ]]
+      });
+    } else {
+      // Find the row number for this plant ID (rows are 1-indexed, +2 for header)
+      const rowIndex = plants.findIndex(p => p.id === plant.id);
+      const rowNum = rowIndex + 2;
+      await sheetsRequest('PUT', `/values/${SHEET_NAME}!A${rowNum}:I${rowNum}?valueInputOption=USER_ENTERED`, {
+        values: [[
+          plant.id, plant.name, plant.variety, plant.bed,
+          plant.date, plant.status, plant.harvest, plant.notes, plant.photo
+        ]]
+      });
+    }
+    setSyncStatus('synced', 'Saved to Google Sheets ✓');
+  } catch (e) {
+    setSyncStatus('error', 'Save failed — check your connection');
+    throw e;
+  }
+}
+
+// Delete a plant row from Google Sheets
+async function deletePlantFromSheet(plant) {
+  setSyncStatus('syncing', 'Deleting…');
+  try {
+    // First, get sheet metadata to find the sheetId for the Plants tab
+    const meta = await sheetsRequest('GET', '?fields=sheets(properties(sheetId,title))');
+    const sheet = meta.sheets.find(s => s.properties.title === SHEET_NAME);
+    if (!sheet) throw new Error('Plants sheet not found');
+
+    const sheetId = sheet.properties.sheetId;
+    const rowIndex = plants.findIndex(p => p.id === plant.id);
+    const rowNum = rowIndex + 1; // 0-indexed for batchUpdate (header is row 0)
+
+    // Use batchUpdate to delete the specific row
+    await sheetsRequest('POST', ':batchUpdate', {
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId: sheetId,
+            dimension: 'ROWS',
+            startIndex: rowNum,      // 0-indexed: 1 = row 2 (first data row)
+            endIndex: rowNum + 1
+          }
+        }
+      }]
+    });
+    setSyncStatus('synced', 'Deleted ✓');
+  } catch (e) {
+    setSyncStatus('error', 'Delete failed — check your connection');
+    throw e;
+  }
+}
+
+// ════════════════════════════════════════════
+//  RENDER PLANTS LIST
+// ════════════════════════════════════════════
+
+function renderPlants() {
+  const q = (document.getElementById('plant-search')?.value || '').toLowerCase();
+
+  // Build list of unique beds for filter chips
+  const beds = ['All', ...new Set(plants.map(p => p.bed).filter(Boolean)).values()].sort((a,b) => a === 'All' ? -1 : a.localeCompare(b));
+  document.getElementById('plant-filters').innerHTML = beds.map(b =>
+    `<button class="filter-chip${bedFilter === b ? ' active' : ''}" onclick="setBedFilter('${esc(b)}')">${esc(b)}</button>`
+  ).join('');
+
+  // Stats bar
+  const beds_count = new Set(plants.map(p => p.bed).filter(Boolean)).size;
+  document.getElementById('plant-stats').innerHTML =
+    `<div class="stat-chip"><strong>${plants.length}</strong> plant${plants.length !== 1 ? 's' : ''}</div>` +
+    (beds_count ? `<div class="stat-chip"><strong>${beds_count}</strong> bed${beds_count !== 1 ? 's' : ''}</div>` : '');
+
+  // Filter and search
+  let filtered = plants.filter(p => {
+    if (bedFilter !== 'All' && p.bed !== bedFilter) return false;
+    if (q && !p.name.toLowerCase().includes(q) && !p.variety.toLowerCase().includes(q) && !p.bed.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const list = document.getElementById('plant-list');
+
+  if (!filtered.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🌱</div>
+        <p>${plants.length ? 'No plants match your search.' : 'No plants yet.<br>Tap <strong>＋ Add Plant</strong> to get started.'}</p>
+      </div>`;
+    return;
+  }
+
+  // Group by bed when no search/filter active
+  if (bedFilter === 'All' && !q) {
+    const grouped = {};
+    filtered.forEach(p => {
+      const bed = p.bed || 'No Bed Assigned';
+      if (!grouped[bed]) grouped[bed] = [];
+      grouped[bed].push(p);
+    });
+    list.innerHTML = Object.keys(grouped).sort().map(bed => {
+      const group = grouped[bed].sort((a,b) => a.name.localeCompare(b.name));
+      return `<div class="section-label">📍 ${esc(bed)}</div>` + group.map(plantCard).join('');
+    }).join('');
+  } else {
+    list.innerHTML = filtered.sort((a,b) => a.name.localeCompare(b.name)).map(plantCard).join('');
+  }
+}
+
+function setBedFilter(bed) {
+  bedFilter = bed;
+  renderPlants();
+}
+
+// Build the HTML for a single plant card
+function plantCard(p) {
+  const statusClass = {
+    'Seedling': 'status-seedling',
+    'Growing': 'status-growing',
+    'Flowering': 'status-flowering',
+    'Ready to Harvest': 'status-ready',
+    'Done': 'status-done'
+  }[p.status] || '';
+
+  const dateStr = p.date ? new Date(p.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">${esc(p.name)}</div>
+          ${p.variety ? `<div class="card-variety">${esc(p.variety)}</div>` : ''}
+        </div>
+        <div class="card-actions">
+          <button class="btn-icon" onclick="openPlantModal('${p.id}')" title="Edit">✏️</button>
+        </div>
+      </div>
+      <div class="card-tags">
+        ${p.status ? `<span class="tag tag-status ${statusClass}">${esc(p.status)}</span>` : ''}
+        ${dateStr ? `<span class="tag tag-date">Planted ${dateStr}</span>` : ''}
+        ${p.harvest ? `<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>` : ''}
+      </div>
+      ${p.notes ? `<div class="card-notes">${esc(p.notes)}</div>` : ''}
+    </div>`;
+}
+
+// ════════════════════════════════════════════
+//  PLANT MODAL — Add / Edit
+// ════════════════════════════════════════════
+
+function openPlantModal(plantId = null) {
+  const modal = document.getElementById('plant-modal');
+  const deleteBtn = document.getElementById('btn-delete-plant');
+
+  if (plantId) {
+    // Edit mode — populate form with existing data
+    const p = plants.find(x => x.id === plantId);
+    if (!p) return;
+    document.getElementById('plant-modal-title').textContent = 'Edit Plant';
+    document.getElementById('plant-edit-id').value = p.id;
+    document.getElementById('f-name').value    = p.name;
+    document.getElementById('f-variety').value = p.variety;
+    document.getElementById('f-bed').value     = p.bed;
+    document.getElementById('f-qty').value     = p.qty || '';
+    document.getElementById('f-date').value    = p.date;
+    document.getElementById('f-status').value  = p.status;
+    document.getElementById('f-harvest').value = p.harvest;
+    document.getElementById('f-notes').value   = p.notes;
+    deleteBtn.style.display = 'block';
+    deleteBtn.setAttribute('data-id', p.id);
+  } else {
+    // Add mode — clear the form
+    document.getElementById('plant-modal-title').textContent = 'Add Plant';
+    document.getElementById('plant-edit-id').value = '';
+    ['f-name','f-variety','f-bed','f-qty','f-date','f-harvest','f-notes'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('f-status').value = '';
+    deleteBtn.style.display = 'none';
+  }
+
+  modal.classList.add('open');
+  // Focus the name field after animation
+  setTimeout(() => document.getElementById('f-name').focus(), 300);
+}
+
+function closePlantModal() {
+  document.getElementById('plant-modal').classList.remove('open');
+}
+
+// Close modal when tapping the backdrop
+document.getElementById('plant-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('plant-modal')) closePlantModal();
+});
+
+async function savePlant() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('Please enter a plant name.'); return; }
+
+  const editId = document.getElementById('plant-edit-id').value;
+  const isNew  = !editId;
+
+  const plant = {
+    id:      isNew ? uid() : editId,
+    name,
+    variety: document.getElementById('f-variety').value.trim(),
+    bed:     document.getElementById('f-bed').value.trim(),
+    qty:     document.getElementById('f-qty').value.trim(),
+    date:    document.getElementById('f-date').value,
+    status:  document.getElementById('f-status').value,
+    harvest: document.getElementById('f-harvest').value.trim(),
+    notes:   document.getElementById('f-notes').value.trim(),
+    photo:   ''
+  };
+
+  // Optimistically update local state first (feels instant)
+  if (isNew) {
+    plants.push(plant);
+  } else {
+    const idx = plants.findIndex(p => p.id === editId);
+    if (idx > -1) plants[idx] = plant;
+  }
+
+  closePlantModal();
+  renderPlants();
+  showToast(isNew ? 'Plant added!' : 'Plant updated!');
+
+  // Then sync to Google Sheets in the background
+  try {
+    await savePlantToSheet(plant, isNew);
+  } catch (e) {
+    // If save failed, reload from sheet to get back in sync
+    showToast('Sync error — reloading…');
+    loadPlants();
+  }
+}
+
+async function deletePlant() {
+  const id = document.getElementById('btn-delete-plant').getAttribute('data-id');
+  const plant = plants.find(p => p.id === id);
+  if (!plant) return;
+  if (!confirm(`Remove "${plant.name}" from your garden?`)) return;
+
+  // Optimistically remove from local state
+  plants = plants.filter(p => p.id !== id);
+  closePlantModal();
+  renderPlants();
+  showToast('Plant removed.');
+
+  // Then delete from sheet
+  try {
+    await deletePlantFromSheet(plant);
+  } catch (e) {
+    showToast('Delete failed — reloading…');
+    loadPlants();
+  }
+}
+
+// ════════════════════════════════════════════
+//  SYNC STATUS BAR
+// ════════════════════════════════════════════
+
+function setSyncStatus(state, text) {
+  const bar = document.getElementById('sync-bar');
+  bar.className = 'sync-bar ' + state;
+  document.getElementById('sync-text').textContent = text;
+  // Auto-hide after a few seconds when synced
+  if (state === 'synced') {
+    setTimeout(() => { bar.style.display = 'none'; }, 3000);
+  } else {
+    bar.style.display = 'flex';
+  }
+}
+
+// ════════════════════════════════════════════
+//  TOAST NOTIFICATION
+// ════════════════════════════════════════════
+
+let toastTimer = null;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+// ════════════════════════════════════════════
+//  UTILITIES
+// ════════════════════════════════════════════
+
+// Generate a unique ID for new records
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// Escape HTML to prevent XSS in rendered content
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════
+//  BOOT — Wait for Google library, then init
+// ════════════════════════════════════════════
+
+// The Google Identity Services script loads async, so we poll until ready
+function waitForGoogle() {
+  if (typeof google !== 'undefined' && google.accounts) {
+    initGoogleAuth();
+  } else {
+    setTimeout(waitForGoogle, 100);
+  }
+}
+waitForGoogle();
+</script>
+</body>
+</html>
