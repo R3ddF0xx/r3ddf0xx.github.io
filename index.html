@@ -183,8 +183,11 @@
   .phase-badge { display: inline-block; background: var(--cream); border: 1.5px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 0.75rem; color: var(--text-muted); margin-top: 12px; }
 
   /* TOAST */
-  #toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--green-dark); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.85rem; z-index: 500; opacity: 0; transition: opacity 0.3s; white-space: nowrap; pointer-events: none; }
-  #toast.show { opacity: 1; }
+  #toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--green-dark); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.85rem; z-index: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  #toast.show { opacity: 1; pointer-events: auto; }
+  #toast-undo { background: var(--amber-light); color: var(--green-dark); border: none; border-radius: 10px; padding: 4px 10px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+  #toast-progress { position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%); height: 3px; background: var(--sage); border-radius: 2px; z-index: 499; opacity: 0; transition: opacity 0.3s; width: 0; }
+  #toast-progress.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -403,7 +406,8 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="toast"><span id="toast-msg"></span><button id="toast-undo" style="display:none" onclick="undoMarkDone()">Undo</button></div>
+<div id="toast-progress"></div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -992,33 +996,70 @@ function addDays(dateStr, days) {
 // ══════════════════════════════════════════
 //  CARE — MARK DONE
 // ══════════════════════════════════════════
+// Holds snapshot so we can revert if user taps Undo within 5 seconds
+let undoState = null;
+
 async function markCareDone(id) {
   const care = careSchedules.find(c => c.id === id); if (!care) return;
 
-  const today     = new Date().toISOString().split('T')[0];
-  const nextDue   = addDays(today, care.freqDays);
-  const oldCalId  = care.calEventId;
+  // Save previous state for undo
+  undoState = {
+    id,
+    prevLastDone:   care.lastDone,
+    prevNextDue:    care.nextDue,
+    prevCalEventId: care.calEventId,
+    saveTimer:      null
+  };
 
-  // Optimistic update
+  const today   = new Date().toISOString().split('T')[0];
+  const nextDue = addDays(today, care.freqDays);
+
+  // Optimistic UI update
   care.lastDone   = today;
   care.nextDue    = nextDue;
   care.calEventId = '';
   renderCare();
-  showToast('✓ Marked done! Next due ' + new Date(nextDue + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+  const nextLabel = new Date(nextDue + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  showUndoToast('✓ Done! Next: ' + nextLabel, 5000);
+
+  // Delay the actual save 5 seconds to allow undo
+  undoState.saveTimer = setTimeout(() => commitMarkDone(id), 5000);
+}
+
+async function commitMarkDone(id) {
+  if (!undoState || undoState.id !== id) return;
+  hideToast();
+  const care = careSchedules.find(c => c.id === id); if (!care) return;
 
   // Delete old calendar event, create new one for next due date
-  if (oldCalId) await deleteCalEvent(oldCalId);
+  if (undoState.prevCalEventId) await deleteCalEvent(undoState.prevCalEventId);
   setSyncStatus('syncing', 'Scheduling next reminder…');
-  const newCalId = await createCalEvent({ title: care.type + ' — ' + care.plant, due: nextDue, notes: 'Home Harvest care reminder' });
+  const newCalId = await createCalEvent({ title: care.type + ' — ' + care.plant, due: care.nextDue, notes: 'Home Harvest care reminder' });
   care.calEventId = newCalId || '';
 
-  // Update local array
   const i = careSchedules.findIndex(c => c.id === id);
   if (i > -1) careSchedules[i] = care;
   renderCare();
 
   try { await saveCareSheet(care, false); setSyncStatus('synced', 'Saved ✓'); }
   catch (e) { showToast('Sync error — reloading…'); loadCare(); }
+  undoState = null;
+}
+
+async function undoMarkDone() {
+  if (!undoState) return;
+  clearTimeout(undoState.saveTimer);
+  hideToast();
+  const care = careSchedules.find(c => c.id === undoState.id);
+  if (care) {
+    care.lastDone   = undoState.prevLastDone;
+    care.nextDue    = undoState.prevNextDue;
+    care.calEventId = undoState.prevCalEventId;
+    renderCare();
+  }
+  showToast('Undone ↩');
+  undoState = null;
 }
 
 // ══════════════════════════════════════════
@@ -1216,11 +1257,46 @@ function setSyncStatus(state, text) {
 //  TOAST
 // ══════════════════════════════════════════
 let toastTimer = null;
+
+// Simple toast — no undo button
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
+  const t    = document.getElementById('toast');
+  const undo = document.getElementById('toast-undo');
+  document.getElementById('toast-msg').textContent = msg;
+  undo.style.display = 'none';
+  t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  toastTimer = setTimeout(() => hideToast(), 2800);
+}
+
+// Toast with Undo button and a progress bar that counts down
+function showUndoToast(msg, duration) {
+  const t    = document.getElementById('toast');
+  const undo = document.getElementById('toast-undo');
+  const prog = document.getElementById('toast-progress');
+  document.getElementById('toast-msg').textContent = msg;
+  undo.style.display = 'block';
+  t.classList.add('show');
+  prog.classList.add('show');
+  // Animate the progress bar shrinking over the duration
+  prog.style.transition = 'none';
+  prog.style.width = '200px';
+  setTimeout(() => {
+    prog.style.transition = `width ${duration}ms linear`;
+    prog.style.width = '0px';
+  }, 30);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => hideToast(), duration);
+}
+
+function hideToast() {
+  const t    = document.getElementById('toast');
+  const prog = document.getElementById('toast-progress');
+  t.classList.remove('show');
+  prog.classList.remove('show');
+  prog.style.transition = 'none';
+  prog.style.width = '0px';
+  clearTimeout(toastTimer);
 }
 
 // ══════════════════════════════════════════
