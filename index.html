@@ -166,6 +166,15 @@
   .btn-secondary { flex: 1; background: var(--cream); color: var(--text-muted); border: 1.5px solid var(--border); border-radius: 10px; padding: 14px; font-family: 'DM Sans', sans-serif; font-size: 1rem; cursor: pointer; min-height: 48px; }
   .btn-danger { background: #ffebee; color: var(--red); border: 1.5px solid #ffcdd2; border-radius: 10px; padding: 12px 16px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; cursor: pointer; margin-top: 8px; width: 100%; min-height: 44px; }
 
+  /* CARE CARDS */
+  .care-card { background: var(--warm-white); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); border: 1px solid rgba(216,212,200,0.6); }
+  .care-card.overdue { border-left: 4px solid var(--red); }
+  .care-card.due-today { border-left: 4px solid var(--amber); }
+  .care-card.upcoming { border-left: 4px solid #2e7d32; }
+  .care-type-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .btn-done { background: var(--green); color: white; border: none; border-radius: 8px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer; white-space: nowrap; min-height: 36px; }
+  .btn-done:active { background: var(--green-mid); }
+
   /* COMING SOON */
   .coming-soon { text-align: center; padding: 60px 24px; color: var(--text-muted); }
   .coming-soon .icon { font-size: 3rem; margin-bottom: 16px; }
@@ -253,12 +262,13 @@
 
     <!-- CARE -->
     <div class="tab-panel" id="panel-care">
-      <div class="coming-soon">
-        <div class="icon">💧</div>
-        <h3>Care Schedules</h3>
-        <p>Watering, fertilizing, and pruning schedules with automatic calendar reminders.</p>
-        <div class="phase-badge">Coming in Phase 3</div>
+      <div class="page-header">
+        <h2 class="page-title">Care Schedules</h2>
+        <button class="btn-add" onclick="openCareModal()">＋ Add Schedule</button>
       </div>
+      <div class="filter-row" id="care-filters"></div>
+      <div class="stats-bar" id="care-stats"></div>
+      <div id="care-list"></div>
     </div>
 
   </div>
@@ -359,6 +369,40 @@
   </div>
 </div>
 
+<!-- CARE MODAL -->
+<div class="modal-overlay" id="care-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" id="care-modal-title">Add Care Schedule</h2>
+    <input type="hidden" id="care-edit-id">
+    <div class="form-group"><label class="form-label">Plant *</label><select class="form-select" id="c-plant"><option value="">— Select plant —</option></select></div>
+    <div class="form-group"><label class="form-label">Care Type *</label>
+      <select class="form-select" id="c-type">
+        <option value="Watering">💧 Watering</option>
+        <option value="Fertilizing">🌱 Fertilizing</option>
+        <option value="Pruning">✂️ Pruning</option>
+        <option value="Pest Treatment">🐛 Pest Treatment</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Every</label><input class="form-input" id="c-freq" type="number" min="1" max="365" placeholder="e.g. 2"></div>
+      <div class="form-group"><label class="form-label">Unit</label>
+        <select class="form-select" id="c-freq-unit">
+          <option value="days">Days</option>
+          <option value="weeks">Weeks</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">First Due Date</label><input class="form-input" id="c-next" type="date"></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="c-notes" placeholder="Optional care notes…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeCareModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveCare()">Save Schedule</button>
+    </div>
+    <button class="btn-danger" id="btn-delete-care" onclick="deleteCare()" style="display:none;">Delete Schedule</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -380,6 +424,7 @@ let harvests    = [];
 let tasks       = [];
 let bedFilter   = 'All';
 let taskFilter  = 'Pending';
+let careFilter  = 'All';
 
 // ══════════════════════════════════════════
 //  AUTH — BUG FIX: token expiry + reliable callback
@@ -523,7 +568,7 @@ async function deleteSheetRow(sheetName, itemsSnapshot, id) {
 async function loadAllData() {
   setSyncStatus('syncing', 'Loading your garden…');
   try {
-    await Promise.all([loadPlants(), loadHarvests(), loadTasks()]);
+    await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare()]);
     setSyncStatus('synced', 'All data loaded ✓');
   } catch (e) {
     setSyncStatus('error', 'Could not load — check your connection');
@@ -911,6 +956,249 @@ async function deleteTask() {
   if (calId) await deleteCalEvent(calId); // Remove from Google Calendar too
   try { await deleteSheetRow('Tasks', snap, id); }
   catch (e) { showToast('Delete failed — reloading…'); loadTasks(); }
+}
+
+// ══════════════════════════════════════════
+//  CARE SCHEDULES — DATA
+// ══════════════════════════════════════════
+let careSchedules = [];
+
+async function loadCare() {
+  const d = await sheetsReq('GET', '/values/Care Schedule!A2:G');
+  careSchedules = (d.values || []).map(r => ({
+    id: r[0]||'', plant: r[1]||'', type: r[2]||'', freqDays: parseInt(r[3]||'1'),
+    lastDone: r[4]||'', nextDue: r[5]||'', calEventId: r[6]||''
+  })).filter(c => c.id && c.plant);
+  renderCare();
+}
+
+async function saveCareSheet(care, isNew) {
+  const row = [care.id, care.plant, care.type, care.freqDays, care.lastDone, care.nextDue, care.calEventId];
+  if (isNew) {
+    await sheetsReq('POST', '/values/Care Schedule!A:G:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+  } else {
+    const n = careSchedules.findIndex(c => c.id === care.id) + 2;
+    await sheetsReq('PUT', `/values/Care Schedule!A${n}:G${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+  }
+}
+
+// Calculate next due date by adding freqDays to a given date string
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+// ══════════════════════════════════════════
+//  CARE — MARK DONE
+// ══════════════════════════════════════════
+async function markCareDone(id) {
+  const care = careSchedules.find(c => c.id === id); if (!care) return;
+
+  const today     = new Date().toISOString().split('T')[0];
+  const nextDue   = addDays(today, care.freqDays);
+  const oldCalId  = care.calEventId;
+
+  // Optimistic update
+  care.lastDone   = today;
+  care.nextDue    = nextDue;
+  care.calEventId = '';
+  renderCare();
+  showToast('✓ Marked done! Next due ' + new Date(nextDue + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+  // Delete old calendar event, create new one for next due date
+  if (oldCalId) await deleteCalEvent(oldCalId);
+  setSyncStatus('syncing', 'Scheduling next reminder…');
+  const newCalId = await createCalEvent({ title: care.type + ' — ' + care.plant, due: nextDue, notes: 'Home Harvest care reminder' });
+  care.calEventId = newCalId || '';
+
+  // Update local array
+  const i = careSchedules.findIndex(c => c.id === id);
+  if (i > -1) careSchedules[i] = care;
+  renderCare();
+
+  try { await saveCareSheet(care, false); setSyncStatus('synced', 'Saved ✓'); }
+  catch (e) { showToast('Sync error — reloading…'); loadCare(); }
+}
+
+// ══════════════════════════════════════════
+//  CARE — RENDER
+// ══════════════════════════════════════════
+function renderCare() {
+  const typeIcons = { 'Watering': '💧', 'Fertilizing': '🌱', 'Pruning': '✂️', 'Pest Treatment': '🐛' };
+  const types = ['All', 'Watering', 'Fertilizing', 'Pruning', 'Pest Treatment'];
+
+  document.getElementById('care-filters').innerHTML = types.map(t =>
+    `<button class="filter-chip${careFilter===t?' active':''}" onclick="careFilter='${t}';renderCare()">${t}</button>`
+  ).join('');
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  let filtered = careSchedules.filter(c => careFilter === 'All' || c.type === careFilter);
+
+  // Sort: overdue first, then by next due date
+  filtered.sort((a, b) => {
+    if (!a.nextDue && !b.nextDue) return 0;
+    if (!a.nextDue) return 1;
+    if (!b.nextDue) return -1;
+    return a.nextDue.localeCompare(b.nextDue);
+  });
+
+  const overdue  = careSchedules.filter(c => c.nextDue && new Date(c.nextDue+'T00:00:00') < today).length;
+  const dueToday = careSchedules.filter(c => { if (!c.nextDue) return false; const d = new Date(c.nextDue+'T00:00:00'); return d.getTime() === today.getTime(); }).length;
+  document.getElementById('care-stats').innerHTML =
+    `<div class="stat-chip"><strong>${careSchedules.length}</strong> schedule${careSchedules.length!==1?'s':''}</div>` +
+    (overdue  ? `<div class="stat-chip" style="background:#ffebee;border-color:#ffcdd2;color:var(--red)"><strong>${overdue}</strong> overdue</div>`  : '') +
+    (dueToday ? `<div class="stat-chip" style="background:#fff8e1;border-color:#ffe082;color:var(--amber)"><strong>${dueToday}</strong> due today</div>` : '');
+
+  const list = document.getElementById('care-list');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">💧</div><p>${careSchedules.length ? 'No schedules match.' : 'No care schedules yet.<br>Tap <strong>＋ Add Schedule</strong> to set up reminders.'}</p></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(c => {
+    const icon = typeIcons[c.type] || '🌿';
+    let statusClass = 'upcoming';
+    let dueTag = '';
+    if (c.nextDue) {
+      const due  = new Date(c.nextDue + 'T00:00:00');
+      const diff = Math.round((due - today) / 86400000);
+      if (diff < 0) {
+        statusClass = 'overdue';
+        dueTag = `<span class="tag tag-overdue">⚠️ Overdue by ${Math.abs(diff)} day${Math.abs(diff)!==1?'s':''}</span>`;
+      } else if (diff === 0) {
+        statusClass = 'due-today';
+        dueTag = `<span class="tag tag-today">📅 Due today</span>`;
+      } else if (diff <= 3) {
+        dueTag = `<span class="tag tag-soon">📅 In ${diff} day${diff!==1?'s':''}</span>`;
+      } else {
+        dueTag = `<span class="tag tag-date">📅 ${due.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`;
+      }
+    }
+    const lastTag  = c.lastDone ? `<span class="tag tag-date">Last: ${new Date(c.lastDone+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : '';
+    const freqLabel = c.freqDays % 7 === 0 && c.freqDays >= 7 ? `Every ${c.freqDays/7} week${c.freqDays/7!==1?'s':''}` : `Every ${c.freqDays} day${c.freqDays!==1?'s':''}`;
+    const calTag   = c.calEventId ? `<span class="tag tag-cal">📆 In Calendar</span>` : '';
+
+    return `<div class="care-card ${statusClass}">
+      <div class="card-header">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div class="care-type-icon">${icon}</div>
+          <div>
+            <div class="card-title">${esc(c.plant)}</div>
+            <div class="card-subtitle">${esc(c.type)} · ${freqLabel}</div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-icon" onclick="openCareModal('${c.id}')">✏️</button>
+        </div>
+      </div>
+      <div class="card-tags">${dueTag}${lastTag}${calTag}</div>
+      <div style="margin-top:10px;">
+        <button class="btn-done" onclick="markCareDone('${c.id}')">✓ Mark Done</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  CARE MODAL
+// ══════════════════════════════════════════
+function openCareModal(id = null) {
+  // Populate plant dropdown
+  document.getElementById('c-plant').innerHTML = '<option value="">— Select plant —</option>' +
+    plants.map(p => `<option value="${esc(p.name)}">${esc(p.name)}${p.variety?' ('+esc(p.variety)+')':''}</option>`).join('');
+
+  const del = document.getElementById('btn-delete-care');
+  if (id) {
+    const c = careSchedules.find(x => x.id === id); if (!c) return;
+    document.getElementById('care-modal-title').textContent = 'Edit Schedule';
+    document.getElementById('care-edit-id').value  = c.id;
+    document.getElementById('c-plant').value       = c.plant;
+    document.getElementById('c-type').value        = c.type;
+    // Convert freqDays back to weeks if applicable
+    if (c.freqDays % 7 === 0 && c.freqDays >= 7) {
+      document.getElementById('c-freq').value      = c.freqDays / 7;
+      document.getElementById('c-freq-unit').value = 'weeks';
+    } else {
+      document.getElementById('c-freq').value      = c.freqDays;
+      document.getElementById('c-freq-unit').value = 'days';
+    }
+    document.getElementById('c-next').value        = c.nextDue;
+    document.getElementById('c-notes').value       = '';
+    del.style.display = 'block'; del.setAttribute('data-id', id);
+  } else {
+    document.getElementById('care-modal-title').textContent = 'Add Care Schedule';
+    document.getElementById('care-edit-id').value  = '';
+    document.getElementById('c-plant').value       = '';
+    document.getElementById('c-type').value        = 'Watering';
+    document.getElementById('c-freq').value        = '';
+    document.getElementById('c-freq-unit').value   = 'days';
+    document.getElementById('c-next').value        = new Date().toISOString().split('T')[0];
+    document.getElementById('c-notes').value       = '';
+    del.style.display = 'none';
+  }
+  document.getElementById('care-modal').classList.add('open');
+}
+function closeCareModal() { document.getElementById('care-modal').classList.remove('open'); }
+document.getElementById('care-modal').addEventListener('click', e => { if (e.target === document.getElementById('care-modal')) closeCareModal(); });
+
+async function saveCare() {
+  const plant = document.getElementById('c-plant').value;
+  const freq  = parseInt(document.getElementById('c-freq').value);
+  const unit  = document.getElementById('c-freq-unit').value;
+  const nextDue = document.getElementById('c-next').value;
+  if (!plant) { showToast('Please select a plant.'); return; }
+  if (!freq || freq < 1) { showToast('Please enter a frequency.'); return; }
+  if (!nextDue) { showToast('Please set a due date.'); return; }
+
+  const freqDays = unit === 'weeks' ? freq * 7 : freq;
+  const editId   = document.getElementById('care-edit-id').value;
+  const isNew    = !editId;
+  const existing = isNew ? null : careSchedules.find(c => c.id === editId);
+
+  const care = {
+    id:         isNew ? uid() : editId,
+    plant,
+    type:       document.getElementById('c-type').value,
+    freqDays,
+    lastDone:   existing ? existing.lastDone : '',
+    nextDue,
+    calEventId: existing ? existing.calEventId : ''
+  };
+
+  // Optimistic update
+  if (isNew) careSchedules.push(care);
+  else { const i = careSchedules.findIndex(c => c.id === editId); if (i > -1) careSchedules[i] = care; }
+  closeCareModal(); renderCare(); showToast(isNew ? 'Schedule added!' : 'Schedule updated!');
+
+  // Create calendar event for new schedules
+  if (isNew) {
+    setSyncStatus('syncing', 'Adding to calendar…');
+    const calId = await createCalEvent({ title: care.type + ' — ' + care.plant, due: care.nextDue, notes: 'Home Harvest care reminder' });
+    if (calId) {
+      care.calEventId = calId;
+      const i = careSchedules.findIndex(c => c.id === care.id);
+      if (i > -1) careSchedules[i] = care;
+      renderCare();
+    }
+  }
+
+  try { await saveCareSheet(care, isNew); setSyncStatus('synced', 'Saved ✓'); }
+  catch (e) { showToast('Sync error — reloading…'); loadCare(); }
+}
+
+async function deleteCare() {
+  const id   = document.getElementById('btn-delete-care').getAttribute('data-id');
+  const care = careSchedules.find(c => c.id === id); if (!care) return;
+  if (!confirm(`Delete "${care.type}" schedule for ${care.plant}?`)) return;
+  const snap   = [...careSchedules];
+  const calId  = care.calEventId;
+  careSchedules = careSchedules.filter(c => c.id !== id);
+  closeCareModal(); renderCare(); showToast('Schedule deleted.');
+  if (calId) await deleteCalEvent(calId);
+  try { await deleteSheetRow('Care Schedule', snap, id); }
+  catch (e) { showToast('Delete failed — reloading…'); loadCare(); }
 }
 
 // ══════════════════════════════════════════
