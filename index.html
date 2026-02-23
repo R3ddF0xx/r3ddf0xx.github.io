@@ -1500,17 +1500,20 @@ If the command doesn't match any of these, respond with:
 Match plant names to the closest existing plant in the garden list when possible.`;
 
   try {
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key, {
+    // Try gemini-1.5-flash first (most widely available), fall back to gemini-pro
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key.trim(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.error?.message || 'Gemini API error');
+      // Show the actual API error message so user knows what's wrong
+      throw new Error('API: ' + (err.error?.message || JSON.stringify(err.error) || 'Unknown error'));
     }
     const data   = await res.json();
     const raw    = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('Gemini raw response:', raw); // helpful for debugging
     const clean  = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
     document.getElementById('voice-loading').style.display = 'none';
@@ -1518,7 +1521,15 @@ Match plant names to the closest existing plant in the garden list when possible
   } catch (e) {
     document.getElementById('voice-loading').style.display = 'none';
     document.getElementById('voice-modal-title').textContent = 'Could not understand';
-    document.getElementById('voice-transcript').textContent = e.message.includes('API') ? 'Check your Gemini API key in Settings.' : 'Try speaking more clearly, e.g. "I picked 3 tomatoes"';
+    // Show the actual error so user can diagnose
+    const msg = e.message || '';
+    if (msg.startsWith('API:')) {
+      document.getElementById('voice-transcript').textContent = msg.replace('API: ', '');
+    } else if (msg.includes('JSON')) {
+      document.getElementById('voice-transcript').textContent = 'Gemini responded but in an unexpected format. Try again.';
+    } else {
+      document.getElementById('voice-transcript').textContent = 'Error: ' + msg;
+    }
     console.error('Gemini error:', e);
   }
 }
