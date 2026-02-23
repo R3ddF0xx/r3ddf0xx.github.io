@@ -188,6 +188,37 @@
   #toast-undo { background: var(--amber-light); color: var(--green-dark); border: none; border-radius: 10px; padding: 4px 10px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; flex-shrink: 0; }
   #toast-progress { position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%); height: 3px; background: var(--sage); border-radius: 2px; z-index: 499; opacity: 0; transition: opacity 0.3s; width: 0; }
   #toast-progress.show { opacity: 1; }
+
+  /* VOICE BUTTON */
+  .voice-btn { position: fixed; bottom: 70px; right: 16px; width: 52px; height: 52px; border-radius: 50%; background: var(--amber); border: none; color: white; font-size: 1.4rem; cursor: pointer; box-shadow: 0 4px 16px rgba(200,133,26,0.45); z-index: 150; display: flex; align-items: center; justify-content: center; transition: transform 0.15s, background 0.2s; }
+  .voice-btn:active { transform: scale(0.93); }
+  .voice-btn.listening { background: var(--red); animation: voicePulse 1s infinite; }
+  @keyframes voicePulse { 0%,100%{box-shadow:0 4px 16px rgba(192,57,43,0.45)} 50%{box-shadow:0 4px 28px rgba(192,57,43,0.8)} }
+
+  /* VOICE CONFIRM MODAL */
+  .voice-confirm { background: white; border-radius: 16px; padding: 20px; margin: 16px 0 0; }
+  .voice-transcript { font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin-bottom: 12px; padding: 10px 12px; background: var(--cream); border-radius: 8px; line-height: 1.5; }
+  .voice-action-title { font-family: "Playfair Display", serif; font-size: 1rem; color: var(--green-dark); margin-bottom: 8px; }
+  .voice-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+  .voice-field { display: flex; gap: 8px; align-items: center; font-size: 0.88rem; }
+  .voice-field-label { color: var(--text-muted); min-width: 80px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .voice-field input, .voice-field select { flex: 1; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-family: "DM Sans", sans-serif; font-size: 0.88rem; background: white; outline: none; min-height: 38px; color: var(--text); }
+  .voice-field input:focus, .voice-field select:focus { border-color: var(--green-mid); }
+
+  /* SETTINGS SCREEN */
+  .settings-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: flex-end; justify-content: center; }
+  .settings-overlay.open { display: flex; }
+  .settings-panel { background: var(--warm-white); border-radius: 20px 20px 0 0; padding: 20px 20px 40px; width: 100%; max-width: 600px; }
+  .settings-title { font-family: "Playfair Display", serif; font-size: 1.2rem; color: var(--green-dark); margin-bottom: 6px; }
+  .settings-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+  .settings-key-row { display: flex; gap: 8px; }
+  .settings-key-row input { flex: 1; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-family: "DM Sans", sans-serif; font-size: 0.9rem; background: white; outline: none; min-height: 44px; }
+  .settings-key-row input:focus { border-color: var(--green-mid); }
+  .btn-save-key { background: var(--green); color: white; border: none; border-radius: 10px; padding: 12px 20px; font-family: "DM Sans", sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; white-space: nowrap; min-height: 44px; }
+  .key-status { font-size: 0.8rem; margin-top: 8px; min-height: 18px; }
+  .key-status.ok  { color: #2e7d32; }
+  .key-status.err { color: var(--red); }
+
 </style>
 </head>
 <body>
@@ -215,7 +246,7 @@
 <div id="app" style="display:none;">
   <div class="header">
     <h1>🌿 Home Harvest</h1>
-    <div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">?</div>
+    <div style="display:flex;align-items:center;gap:8px;"><button class="btn-icon" onclick="openSettings()" title="Settings" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">⚙️</button><div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">?</div></div>
   </div>
   <div class="user-menu" id="user-menu">
     <div class="user-menu-name">
@@ -403,6 +434,47 @@
       <button class="btn-primary" onclick="saveCare()">Save Schedule</button>
     </div>
     <button class="btn-danger" id="btn-delete-care" onclick="deleteCare()" style="display:none;">Delete Schedule</button>
+  </div>
+</div>
+
+<!-- VOICE BUTTON -->
+<button class="voice-btn" id="voice-btn" onclick="startVoice()" title="Voice command">🎤</button>
+
+<!-- VOICE MODAL -->
+<div class="modal-overlay" id="voice-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" id="voice-modal-title">Listening…</h2>
+    <p id="voice-transcript" style="font-size:0.88rem;color:var(--text-muted);min-height:40px;font-style:italic;margin-bottom:16px;line-height:1.5;"></p>
+    <div id="voice-confirm" style="display:none;">
+      <div class="voice-action-title" id="voice-action-label"></div>
+      <div class="voice-fields" id="voice-fields"></div>
+    </div>
+    <div class="modal-actions" id="voice-actions" style="display:none;">
+      <button class="btn-secondary" onclick="closeVoiceModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmVoiceAction()">✓ Confirm</button>
+    </div>
+    <div id="voice-loading" style="text-align:center;padding:20px;color:var(--text-muted);font-size:0.88rem;display:none;">
+      <div class="spinner" style="margin:0 auto 12px;"></div>
+      Understanding your command…
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="settings-overlay" id="settings-overlay">
+  <div class="settings-panel">
+    <div class="modal-handle"></div>
+    <div class="settings-title">⚙️ Settings</div>
+    <div class="settings-sub">Enter your Gemini API key to enable voice commands. Your key is stored only on this device and never sent to our servers.</div>
+    <div class="settings-key-row">
+      <input type="password" id="gemini-key-input" placeholder="Paste your Gemini API key…">
+      <button class="btn-save-key" onclick="saveGeminiKey()">Save</button>
+    </div>
+    <div class="key-status" id="key-status"></div>
+    <div style="margin-top:20px;">
+      <button class="btn-secondary" style="width:100%;" onclick="closeSettings()">Close</button>
+    </div>
   </div>
 </div>
 
@@ -1304,6 +1376,275 @@ function hideToast() {
 // ══════════════════════════════════════════
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+
+// ══════════════════════════════════════════
+//  SETTINGS — GEMINI API KEY
+// ══════════════════════════════════════════
+function openSettings() {
+  const key = localStorage.getItem('hh_gemini_key') || '';
+  document.getElementById('gemini-key-input').value = key ? '••••••••••••••••' : '';
+  document.getElementById('key-status').textContent = key ? '✓ API key saved' : '';
+  document.getElementById('key-status').className = key ? 'key-status ok' : 'key-status';
+  document.getElementById('settings-overlay').classList.add('open');
+  closeUserMenu();
+}
+function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); }
+document.getElementById('settings-overlay').addEventListener('click', e => { if (e.target === document.getElementById('settings-overlay')) closeSettings(); });
+
+function saveGeminiKey() {
+  const val = document.getElementById('gemini-key-input').value.trim();
+  if (!val || val.startsWith('•')) { showToast('Please paste a valid key.'); return; }
+  localStorage.setItem('hh_gemini_key', val);
+  document.getElementById('key-status').textContent = '✓ Key saved!';
+  document.getElementById('key-status').className = 'key-status ok';
+  showToast('Gemini API key saved!');
+}
+
+// ══════════════════════════════════════════
+//  VOICE — SPEECH RECOGNITION
+// ══════════════════════════════════════════
+let voiceRecognition  = null;
+let pendingVoiceAction = null; // parsed action waiting for user confirmation
+
+function startVoice() {
+  const key = localStorage.getItem('hh_gemini_key');
+  if (!key) {
+    openSettings();
+    showToast('Please add your Gemini API key first.');
+    return;
+  }
+  // Check browser support
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showToast('Voice not supported in this browser. Try Chrome.');
+    return;
+  }
+  voiceRecognition = new SR();
+  voiceRecognition.lang = 'en-US';
+  voiceRecognition.interimResults = false;
+  voiceRecognition.maxAlternatives = 1;
+
+  document.getElementById('voice-btn').classList.add('listening');
+  document.getElementById('voice-modal-title').textContent = 'Listening…';
+  document.getElementById('voice-transcript').textContent = 'Speak now…';
+  document.getElementById('voice-confirm').style.display = 'none';
+  document.getElementById('voice-actions').style.display = 'none';
+  document.getElementById('voice-loading').style.display = 'none';
+  document.getElementById('voice-modal').classList.add('open');
+
+  voiceRecognition.onresult = async (e) => {
+    const transcript = e.results[0][0].transcript;
+    document.getElementById('voice-btn').classList.remove('listening');
+    document.getElementById('voice-transcript').textContent = '"' + transcript + '"';
+    document.getElementById('voice-loading').style.display = 'block';
+    document.getElementById('voice-modal-title').textContent = 'Understanding…';
+    await parseVoiceCommand(transcript);
+  };
+  voiceRecognition.onerror = (e) => {
+    document.getElementById('voice-btn').classList.remove('listening');
+    document.getElementById('voice-modal-title').textContent = 'Could not hear you';
+    document.getElementById('voice-transcript').textContent = 'Please try again.';
+    document.getElementById('voice-loading').style.display = 'none';
+  };
+  voiceRecognition.onend = () => {
+    document.getElementById('voice-btn').classList.remove('listening');
+  };
+  voiceRecognition.start();
+}
+
+function closeVoiceModal() {
+  document.getElementById('voice-modal').classList.remove('open');
+  document.getElementById('voice-btn').classList.remove('listening');
+  if (voiceRecognition) { try { voiceRecognition.stop(); } catch(e) {} }
+  pendingVoiceAction = null;
+}
+document.getElementById('voice-modal').addEventListener('click', e => { if (e.target === document.getElementById('voice-modal')) closeVoiceModal(); });
+
+// ══════════════════════════════════════════
+//  VOICE — GEMINI PARSING
+// ══════════════════════════════════════════
+async function parseVoiceCommand(transcript) {
+  const key = localStorage.getItem('hh_gemini_key');
+
+  // Build context strings so Gemini knows what plants/schedules exist
+  const plantNames    = plants.map(p => p.name + (p.variety ? ' (' + p.variety + ')' : '')).join(', ') || 'none yet';
+  const careNames     = careSchedules.map(c => c.type + ' for ' + c.plant).join(', ') || 'none yet';
+  const today         = new Date().toISOString().split('T')[0];
+
+  const prompt = `You are a garden assistant. Parse this voice command into a structured action.
+
+Current date: ${today}
+Plants in garden: ${plantNames}
+Care schedules: ${careNames}
+
+Voice command: "${transcript}"
+
+Respond ONLY with a JSON object (no markdown, no explanation) in one of these formats:
+
+Log a harvest:
+{"action":"harvest","plant":"<exact plant name from list>","qty":"<number>","unit":"<count|lbs|oz|kg|g|bunches>","date":"${today}","notes":""}
+
+Mark care done:
+{"action":"care_done","scheduleDesc":"<type> for <plant> matching the care schedules list>"}
+
+Add a task:
+{"action":"task","title":"<task description>","due":"<YYYY-MM-DD or empty string>","notes":""}
+
+Add a plant:
+{"action":"plant","name":"<plant name>","variety":"<variety or empty>","bed":"<bed name or empty>","qty":"<quantity description or empty>","date":"${today}"}
+
+If the command doesn't match any of these, respond with:
+{"action":"unknown","message":"<brief explanation of what was heard>"}
+
+Match plant names to the closest existing plant in the garden list when possible.`;
+
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'Gemini API error');
+    }
+    const data   = await res.json();
+    const raw    = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean  = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    document.getElementById('voice-loading').style.display = 'none';
+    showVoiceConfirm(parsed, transcript);
+  } catch (e) {
+    document.getElementById('voice-loading').style.display = 'none';
+    document.getElementById('voice-modal-title').textContent = 'Could not understand';
+    document.getElementById('voice-transcript').textContent = e.message.includes('API') ? 'Check your Gemini API key in Settings.' : 'Try speaking more clearly, e.g. "I picked 3 tomatoes"';
+    console.error('Gemini error:', e);
+  }
+}
+
+// ══════════════════════════════════════════
+//  VOICE — SHOW CONFIRM SCREEN
+// ══════════════════════════════════════════
+function showVoiceConfirm(parsed, transcript) {
+  pendingVoiceAction = parsed;
+  document.getElementById('voice-modal-title').textContent = 'Does this look right?';
+
+  const confirm  = document.getElementById('voice-confirm');
+  const label    = document.getElementById('voice-action-label');
+  const fields   = document.getElementById('voice-fields');
+  const actions  = document.getElementById('voice-actions');
+
+  if (parsed.action === 'unknown') {
+    label.textContent = "Sorry, I didn't understand that.";
+    fields.innerHTML  = `<p style="font-size:0.85rem;color:var(--text-muted);">${esc(parsed.message || '')}</p><p style="font-size:0.82rem;color:var(--text-muted);margin-top:8px;">Try: "I picked 5 tomatoes", "I watered the tomatoes", "Add task fertilize beds", or "I planted 3 basil in Bed 1"</p>`;
+    actions.style.display = 'none';
+    confirm.style.display = 'block';
+    return;
+  }
+
+  // Build editable confirmation fields based on action type
+  let labelText = '';
+  let fieldsHtml = '';
+
+  if (parsed.action === 'harvest') {
+    labelText = '🧺 Log Harvest';
+    const plantOpts = plants.map(p => `<option value="${esc(p.name)}" ${p.name===parsed.plant?'selected':''}>${esc(p.name)}</option>`).join('');
+    const unitOpts  = ['count','lbs','oz','kg','g','bunches'].map(u => `<option value="${u}" ${u===parsed.unit?'selected':''}>${u}</option>`).join('');
+    fieldsHtml = `
+      <div class="voice-field"><span class="voice-field-label">Plant</span><select id="vc-plant">${plantOpts}</select></div>
+      <div class="voice-field"><span class="voice-field-label">Quantity</span><input type="number" id="vc-qty" value="${esc(parsed.qty)}" min="0" step="0.1"></div>
+      <div class="voice-field"><span class="voice-field-label">Unit</span><select id="vc-unit">${unitOpts}</select></div>
+      <div class="voice-field"><span class="voice-field-label">Date</span><input type="date" id="vc-date" value="${esc(parsed.date)}"></div>`;
+  } else if (parsed.action === 'care_done') {
+    labelText = '💧 Mark Care Done';
+    // Find matching care schedule
+    const match = careSchedules.find(c => (c.type + ' for ' + c.plant).toLowerCase() === (parsed.scheduleDesc||'').toLowerCase())
+                || careSchedules.find(c => parsed.scheduleDesc && parsed.scheduleDesc.toLowerCase().includes(c.plant.toLowerCase()));
+    const careOpts = careSchedules.map(c => {
+      const val  = c.id;
+      const text = c.type + ' — ' + c.plant;
+      const sel  = match && match.id === c.id ? 'selected' : '';
+      return `<option value="${esc(val)}" ${sel}>${esc(text)}</option>`;
+    }).join('');
+    if (!careOpts) {
+      label.textContent = 'No care schedules set up yet.';
+      fields.innerHTML  = `<p style="font-size:0.85rem;color:var(--text-muted);">Add a care schedule in the Care tab first.</p>`;
+      actions.style.display = 'none';
+      confirm.style.display = 'block';
+      return;
+    }
+    fieldsHtml = `<div class="voice-field"><span class="voice-field-label">Schedule</span><select id="vc-care">${careOpts}</select></div>`;
+  } else if (parsed.action === 'task') {
+    labelText = '✅ Add Task';
+    fieldsHtml = `
+      <div class="voice-field"><span class="voice-field-label">Task</span><input type="text" id="vc-title" value="${esc(parsed.title)}"></div>
+      <div class="voice-field"><span class="voice-field-label">Due Date</span><input type="date" id="vc-due" value="${esc(parsed.due||'')}"></div>`;
+  } else if (parsed.action === 'plant') {
+    labelText = '🌱 Add Plant';
+    fieldsHtml = `
+      <div class="voice-field"><span class="voice-field-label">Name</span><input type="text" id="vc-name" value="${esc(parsed.name)}"></div>
+      <div class="voice-field"><span class="voice-field-label">Variety</span><input type="text" id="vc-variety" value="${esc(parsed.variety||'')}"></div>
+      <div class="voice-field"><span class="voice-field-label">Bed</span><input type="text" id="vc-bed" value="${esc(parsed.bed||'')}"></div>
+      <div class="voice-field"><span class="voice-field-label">Quantity</span><input type="text" id="vc-qty2" value="${esc(parsed.qty||'')}"></div>
+      <div class="voice-field"><span class="voice-field-label">Date</span><input type="date" id="vc-date2" value="${esc(parsed.date||'')}"></div>`;
+  }
+
+  label.textContent     = labelText;
+  fields.innerHTML      = fieldsHtml;
+  confirm.style.display = 'block';
+  actions.style.display = 'flex';
+}
+
+// ══════════════════════════════════════════
+//  VOICE — CONFIRM ACTION
+// ══════════════════════════════════════════
+async function confirmVoiceAction() {
+  if (!pendingVoiceAction) return;
+  const action = pendingVoiceAction.action;
+  closeVoiceModal();
+
+  if (action === 'harvest') {
+    const plant = document.getElementById('vc-plant')?.value;
+    const qty   = document.getElementById('vc-qty')?.value;
+    const unit  = document.getElementById('vc-unit')?.value;
+    const date  = document.getElementById('vc-date')?.value;
+    if (!plant || !qty) { showToast('Missing plant or quantity.'); return; }
+    const harvest = { id: uid(), date, plant, qty, unit, notes: '' };
+    harvests.push(harvest);
+    renderHarvests();
+    showToast('🧺 Harvest logged!');
+    try { await saveHarvestSheet(harvest, true); } catch(e) { loadHarvests(); }
+
+  } else if (action === 'care_done') {
+    const careId = document.getElementById('vc-care')?.value;
+    if (careId) await markCareDone(careId);
+
+  } else if (action === 'task') {
+    const title = document.getElementById('vc-title')?.value?.trim();
+    const due   = document.getElementById('vc-due')?.value;
+    if (!title) { showToast('Task title is empty.'); return; }
+    const task = { id: uid(), title, due, completed: 'N', calEventId: '', notes: '' };
+    tasks.push(task);
+    renderTasks();
+    showToast('Task added!');
+    if (due) {
+      const calId = await createCalEvent({ title, due, notes: '' });
+      if (calId) { task.calEventId = calId; renderTasks(); }
+    }
+    try { await saveTaskSheet(task, true); } catch(e) { loadTasks(); }
+
+  } else if (action === 'plant') {
+    const name = document.getElementById('vc-name')?.value?.trim();
+    if (!name) { showToast('Plant name is empty.'); return; }
+    const plant = { id: uid(), name, variety: document.getElementById('vc-variety')?.value||'', bed: document.getElementById('vc-bed')?.value||'', qty: document.getElementById('vc-qty2')?.value||'', date: document.getElementById('vc-date2')?.value||'', status: 'Seedling', harvest: '', notes: '', photo: '' };
+    plants.push(plant);
+    renderPlants();
+    showToast('🌱 Plant added!');
+    try { await savePlantSheet(plant, true); } catch(e) { loadPlants(); }
+  }
+  pendingVoiceAction = null;
+}
 
 // ══════════════════════════════════════════
 //  BOOT
