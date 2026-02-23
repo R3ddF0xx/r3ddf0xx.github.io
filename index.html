@@ -1501,7 +1501,7 @@ Match plant names to the closest existing plant in the garden list when possible
 
   try {
     // Try gemini-1.5-flash first (most widely available), fall back to gemini-pro
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key.trim(), {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + key.trim(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
