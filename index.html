@@ -1815,7 +1815,11 @@ let aiChatHistory    = [];   // [{role, content}] sent to Gemini each turn
 let aiPendingImage   = null; // {base64, mime, dataUrl} if photo attached
 let aiMicListening   = false;
 
-const AI_SYSTEM_PROMPT = `You are a friendly, knowledgeable home garden assistant for a garden in Tulsa, Oklahoma (USDA Zone 7a). 
+// System prompt is a function so today's date is always current
+function getAISystemPrompt() {
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  return `You are a friendly, knowledgeable home garden assistant for a garden in Tulsa, Oklahoma (USDA Zone 7a).
 The gardener uses the Home Harvest app to track their plants, tasks, and harvests.
 You help with all gardening topics: planting schedules, pest identification, disease diagnosis, watering, fertilizing, companion planting, soil health, and seasonal advice.
 Always tailor advice to Zone 7a / Tulsa climate: last frost ~April 1, first frost ~November 1, hot humid summers, mild winters.
@@ -1823,9 +1827,20 @@ Keep answers friendly, practical, and concise — this is a mobile app. Use bull
 If a photo is shared, analyze it for plant health, pest, or disease issues.
 Stay focused on gardening topics. If asked about something unrelated, gently redirect to gardening.
 
-IMPORTANT: When the user asks you to set a reminder, create a task, add something to their calendar, or schedule something, always end your response with a special JSON block on its own line in this exact format:
-ACTION:{"type":"task","title":"Task title here","due":"YYYY-MM-DD","notes":"Optional notes here"}
-Use today's date context to calculate relative dates like "tomorrow" or "next Friday". Today is ${new Date().toISOString().split('T')[0]}.`;
+TODAY'S DATE: ${today}
+TOMORROW'S DATE: ${tomorrow}
+
+CRITICAL INSTRUCTION — TASK/REMINDER CREATION:
+When the user asks you to set a reminder, create a task, schedule something, or add anything to their calendar or to-do list, you MUST do TWO things:
+1. Reply with a short friendly confirmation message (1 sentence)
+2. On the very last line of your response, output ONLY this JSON with no extra text before or after it on that line:
+ACTION:{"type":"task","title":"TASK TITLE HERE","due":"YYYY-MM-DD","notes":"NOTES HERE"}
+
+Replace TASK TITLE HERE with a short clear task title.
+Replace YYYY-MM-DD with the correct date (use the dates provided above for relative terms like "tomorrow").
+Replace NOTES HERE with any relevant details or leave empty string.
+Do NOT say you have created the reminder without including the ACTION line — the ACTION line is what actually creates it.`;
+}
 
 function buildAIContext() {
   const plantList  = plants.length ? plants.map(p => `${p.name}${p.variety?' ('+p.variety+')':''} in ${p.bed||'unknown bed'}, status: ${p.status}`).join('; ') : 'No plants recorded yet';
@@ -1975,7 +1990,7 @@ async function sendAIMessage() {
   }
   // Add current message with image if present
   const currentParts = [];
-  if (messages.length === 0) currentParts.push({ text: AI_SYSTEM_PROMPT + contextNote + '\n\n' }); // inject system context on first message
+  if (messages.length === 0) currentParts.push({ text: getAISystemPrompt() + contextNote + '\n\n' }); // inject system context on first message
   if (imageForThisMessage) currentParts.push({ inline_data: { mime_type: imageForThisMessage.mime, data: imageForThisMessage.base64 } });
   if (text) currentParts.push({ text: messages.length === 0 ? text : text });
   else if (!imageForThisMessage) currentParts.push({ text: '' });
@@ -1995,14 +2010,16 @@ async function sendAIMessage() {
     const rawReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
 
     // Check for ACTION block
-    const actionMatch = rawReply.match(/ACTION:(\{.*?\})/s);
+    console.log('Gemini raw reply:', rawReply); // debug
+    const actionMatch = rawReply.match(/ACTION:(\{[^\n]+\})/);
     let actionData = null;
     let reply = rawReply;
     if (actionMatch) {
       try {
         actionData = JSON.parse(actionMatch[1]);
-        reply = rawReply.replace(/ACTION:\{.*?\}/s, '').trim(); // remove from display text
-      } catch(e) { /* ignore parse errors */ }
+        reply = rawReply.replace(/ACTION:\{[^\n]+\}/, '').trim();
+        console.log('Action detected:', actionData);
+      } catch(e) { console.error('Action parse error:', e, actionMatch[1]); }
     }
 
     // Remove thinking bubble, show real response
