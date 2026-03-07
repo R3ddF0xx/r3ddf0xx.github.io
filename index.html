@@ -238,7 +238,7 @@
 
 
   /* AI CHAT */
-  .ai-overlay { display:none; position:fixed; inset:0; background:var(--bg); z-index:300; flex-direction:column; }
+  .ai-overlay { display:none; position:fixed; inset:0; background:#1a1a1a; z-index:300; flex-direction:column; }
   .ai-overlay.open { display:flex; }
   .ai-header { background:var(--green-dark); color:white; padding:14px 16px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
   .ai-header h2 { font-family:'Playfair Display',serif; font-size:1.1rem; display:flex; align-items:center; gap:8px; }
@@ -1821,7 +1821,11 @@ You help with all gardening topics: planting schedules, pest identification, dis
 Always tailor advice to Zone 7a / Tulsa climate: last frost ~April 1, first frost ~November 1, hot humid summers, mild winters.
 Keep answers friendly, practical, and concise — this is a mobile app. Use bullet points for lists.
 If a photo is shared, analyze it for plant health, pest, or disease issues.
-Stay focused on gardening topics. If asked about something unrelated, gently redirect to gardening.`;
+Stay focused on gardening topics. If asked about something unrelated, gently redirect to gardening.
+
+IMPORTANT: When the user asks you to set a reminder, create a task, add something to their calendar, or schedule something, always end your response with a special JSON block on its own line in this exact format:
+ACTION:{"type":"task","title":"Task title here","due":"YYYY-MM-DD","notes":"Optional notes here"}
+Use today's date context to calculate relative dates like "tomorrow" or "next Friday". Today is ${new Date().toISOString().split('T')[0]}.`;
 
 function buildAIContext() {
   const plantList  = plants.length ? plants.map(p => `${p.name}${p.variety?' ('+p.variety+')':''} in ${p.bed||'unknown bed'}, status: ${p.status}`).join('; ') : 'No plants recorded yet';
@@ -1988,12 +1992,32 @@ async function sendAIMessage() {
       throw new Error(err.error?.message || 'API error');
     }
     const data  = await res.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+    const rawReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+
+    // Check for ACTION block
+    const actionMatch = rawReply.match(/ACTION:(\{.*?\})/s);
+    let actionData = null;
+    let reply = rawReply;
+    if (actionMatch) {
+      try {
+        actionData = JSON.parse(actionMatch[1]);
+        reply = rawReply.replace(/ACTION:\{.*?\}/s, '').trim(); // remove from display text
+      } catch(e) { /* ignore parse errors */ }
+    }
 
     // Remove thinking bubble, show real response
     const thinkingBubble = document.getElementById(thinkingId)?.closest('.ai-bubble');
     if (thinkingBubble) thinkingBubble.remove();
-    appendAIBubble('assistant', formatAIResponse(reply));
+
+    let bubbleHTML = formatAIResponse(reply);
+    if (actionData && actionData.type === 'task') {
+      bubbleHTML += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.1);">
+        <button class="photo-btn" style="font-size:0.82rem;padding:7px 14px;" onclick="createTaskFromAI(${JSON.stringify(actionData).replace(/"/g,'&quot;')})">
+          ＋ Add to Tasks &amp; Calendar
+        </button>
+      </div>`;
+    }
+    appendAIBubble('assistant', bubbleHTML);
     aiChatHistory.push({ role: 'model', content: reply });
   } catch (e) {
     const thinkingBubble = document.getElementById(thinkingId)?.closest('.ai-bubble');
@@ -2026,6 +2050,36 @@ function formatAIResponse(text) {
     .replace(/^- (.+)$/gm, '<li>$1</li>')
     .replace(/(<li>.*<\/li>)/s, '<ul style="margin:6px 0 6px 16px;padding:0;">$1</ul>')
     .replace(/\n/g, '<br>');
+}
+
+async function createTaskFromAI(actionData) {
+  const task = {
+    id: uid(),
+    title: actionData.title || 'Garden task',
+    due: actionData.due || '',
+    completed: 'N',
+    calEventId: '',
+    notes: actionData.notes || ''
+  };
+  tasks.push(task);
+  renderTasks();
+  // Always try to add to Google Calendar if there's a due date
+  if (task.due) {
+    setSyncStatus('syncing', 'Adding to calendar…');
+    const calId = await createCalEvent(task);
+    if (calId) {
+      task.calEventId = calId;
+      tasks[tasks.findIndex(t => t.id === task.id)] = task;
+      renderTasks();
+    }
+  }
+  try {
+    await saveTaskSheet(task, true);
+    setSyncStatus('synced', 'Saved ✓');
+    showToast('✅ Task added' + (task.due ? ' & calendar event created!' : '!'));
+  } catch(e) {
+    showToast('Task saved locally — sync error.');
+  }
 }
 
 function escHtml(str) {
