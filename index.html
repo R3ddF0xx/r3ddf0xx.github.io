@@ -569,7 +569,7 @@
   <div class="ai-input-bar">
     <button class="ai-action-btn ai-cam-btn" onclick="openAICamera()" title="Attach photo">📷</button>
     <textarea id="ai-input" placeholder="Ask about your garden…" rows="1" onkeydown="aiInputKeydown(event)" oninput="autoResizeAIInput(this)"></textarea>
-    <button class="ai-action-btn ai-mic-btn" id="ai-mic-btn" onclick="startAIVoice()" title="Speak">🎤</button>
+    <button class="ai-action-btn ai-mic-btn" id="ai-mic-btn" title="Hold to talk" onpointerdown="startAIVoice(event)" onpointerup="stopAIVoice()" onpointercancel="stopAIVoice()" onpointerleave="stopAIVoice()">🎤</button>
     <button class="ai-action-btn ai-send-btn" onclick="sendAIMessage()" title="Send">➤</button>
   </div>
 </div>
@@ -1918,22 +1918,61 @@ function removeAIImage() {
 }
 
 // ── Voice ──
-function startAIVoice() {
+let aiSpeechRec = null;
+
+function startAIVoice(event) {
+  event.preventDefault(); // prevent any default touch behavior
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) { showToast('Voice not supported in this browser.'); return; }
   if (aiMicListening) return;
-  const rec = new SpeechRecognition();
-  rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
+
+  aiSpeechRec = new SpeechRecognition();
+  aiSpeechRec.lang = 'en-US';
+  aiSpeechRec.interimResults = true;  // show words as they come in
+  aiSpeechRec.continuous = true;      // keep listening until we stop it
+
   aiMicListening = true;
-  document.getElementById('ai-mic-btn').classList.add('listening');
-  rec.start();
-  rec.onresult = (e) => {
-    const transcript = e.results[0][0].transcript;
-    document.getElementById('ai-input').value = transcript;
+  const btn = document.getElementById('ai-mic-btn');
+  btn.classList.add('listening');
+  btn.textContent = '🔴';
+
+  let finalTranscript = '';
+
+  aiSpeechRec.onresult = (e) => {
+    let interim = '';
+    finalTranscript = '';
+    for (let i = 0; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    // Show live transcript in input field
+    document.getElementById('ai-input').value = finalTranscript || interim;
     autoResizeAIInput(document.getElementById('ai-input'));
   };
-  rec.onend = () => { aiMicListening = false; document.getElementById('ai-mic-btn').classList.remove('listening'); };
-  rec.onerror = () => { aiMicListening = false; document.getElementById('ai-mic-btn').classList.remove('listening'); showToast('Could not hear you — try again.'); };
+
+  aiSpeechRec.onend = () => {
+    aiMicListening = false;
+    const btn = document.getElementById('ai-mic-btn');
+    btn.classList.remove('listening');
+    btn.textContent = '🎤';
+    aiSpeechRec = null;
+  };
+
+  aiSpeechRec.onerror = (e) => {
+    aiMicListening = false;
+    const btn = document.getElementById('ai-mic-btn');
+    btn.classList.remove('listening');
+    btn.textContent = '🎤';
+    aiSpeechRec = null;
+    if (e.error !== 'aborted') showToast('Could not hear you — try again.');
+  };
+
+  aiSpeechRec.start();
+}
+
+function stopAIVoice() {
+  if (!aiMicListening || !aiSpeechRec) return;
+  aiSpeechRec.stop(); // triggers onend which cleans up
 }
 
 // ── Send message ──
