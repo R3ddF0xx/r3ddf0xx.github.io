@@ -1918,61 +1918,94 @@ function removeAIImage() {
 }
 
 // ── Voice ──
-let aiSpeechRec = null;
+let aiSpeechRec     = null;
+let aiButtonHeld    = false;  // true while finger/mouse is down
+let aiAccumulated   = '';     // builds up transcript across restarts
 
 function startAIVoice(event) {
-  event.preventDefault(); // prevent any default touch behavior
+  event.preventDefault();
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) { showToast('Voice not supported in this browser.'); return; }
-  if (aiMicListening) return;
+
+  aiButtonHeld  = true;
+  aiAccumulated = '';
+  document.getElementById('ai-input').value = '';
+  _aiStartRecognition(SpeechRecognition);
+}
+
+function _aiStartRecognition(SpeechRecognition) {
+  if (!aiButtonHeld) return; // button was released before restart
 
   aiSpeechRec = new SpeechRecognition();
   aiSpeechRec.lang = 'en-US';
-  aiSpeechRec.interimResults = true;  // show words as they come in
-  aiSpeechRec.continuous = true;      // keep listening until we stop it
+  aiSpeechRec.interimResults = true;
+  aiSpeechRec.continuous = false; // false is more reliable; we restart manually on silence
 
   aiMicListening = true;
   const btn = document.getElementById('ai-mic-btn');
   btn.classList.add('listening');
   btn.textContent = '🔴';
 
-  let finalTranscript = '';
-
   aiSpeechRec.onresult = (e) => {
     let interim = '';
-    finalTranscript = '';
+    let final   = '';
     for (let i = 0; i < e.results.length; i++) {
-      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
-      else interim += e.results[i][0].transcript;
+      if (e.results[i].isFinal) final   += e.results[i][0].transcript + ' ';
+      else                       interim += e.results[i][0].transcript;
     }
-    // Show live transcript in input field
-    document.getElementById('ai-input').value = finalTranscript || interim;
+    if (final) aiAccumulated += final;
+    // Show accumulated + current interim in input field
+    document.getElementById('ai-input').value = (aiAccumulated + interim).trim();
     autoResizeAIInput(document.getElementById('ai-input'));
   };
 
   aiSpeechRec.onend = () => {
-    aiMicListening = false;
-    const btn = document.getElementById('ai-mic-btn');
-    btn.classList.remove('listening');
-    btn.textContent = '🎤';
     aiSpeechRec = null;
+    if (aiButtonHeld) {
+      // Button still held — browser timed out on silence, restart immediately
+      aiMicListening = false;
+      _aiStartRecognition(SpeechRecognition);
+    } else {
+      // Button was released — clean up normally
+      aiMicListening = false;
+      const btn = document.getElementById('ai-mic-btn');
+      btn.classList.remove('listening');
+      btn.textContent = '🎤';
+    }
   };
 
   aiSpeechRec.onerror = (e) => {
+    aiSpeechRec = null;
+    if (e.error === 'aborted') return; // we caused this by stopping, ignore
+    if (e.error === 'no-speech' && aiButtonHeld) {
+      // No speech detected but button still held — restart silently
+      aiMicListening = false;
+      _aiStartRecognition(SpeechRecognition);
+      return;
+    }
+    aiMicListening = false;
+    aiButtonHeld   = false;
+    const btn = document.getElementById('ai-mic-btn');
+    btn.classList.remove('listening');
+    btn.textContent = '🎤';
+    if (e.error !== 'aborted') showToast('Could not hear you — try again.');
+  };
+
+  try { aiSpeechRec.start(); } catch(e) { /* already started */ }
+}
+
+function stopAIVoice() {
+  if (!aiButtonHeld) return;
+  aiButtonHeld = false;
+  if (aiSpeechRec) {
+    try { aiSpeechRec.stop(); } catch(e) { /* ignore */ }
+  } else {
+    // Already stopped (restarting), just clean up UI
     aiMicListening = false;
     const btn = document.getElementById('ai-mic-btn');
     btn.classList.remove('listening');
     btn.textContent = '🎤';
-    aiSpeechRec = null;
-    if (e.error !== 'aborted') showToast('Could not hear you — try again.');
-  };
-
-  aiSpeechRec.start();
-}
-
-function stopAIVoice() {
-  if (!aiMicListening || !aiSpeechRec) return;
-  aiSpeechRec.stop(); // triggers onend which cleans up
+  }
 }
 
 // ── Send message ──
