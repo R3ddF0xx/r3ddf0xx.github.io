@@ -236,6 +236,40 @@
   .diagnosis-title { font-weight: 600; color: var(--green-dark); margin-bottom: 6px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
   .diagnosis-analyzing { color: var(--text-muted); font-style: italic; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 
+
+  /* AI CHAT */
+  .ai-overlay { display:none; position:fixed; inset:0; background:var(--bg); z-index:300; flex-direction:column; }
+  .ai-overlay.open { display:flex; }
+  .ai-header { background:var(--green-dark); color:white; padding:14px 16px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .ai-header h2 { font-family:'Playfair Display',serif; font-size:1.1rem; display:flex; align-items:center; gap:8px; }
+  .ai-header-actions { display:flex; gap:8px; }
+  .ai-messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .ai-bubble { max-width:85%; padding:10px 14px; border-radius:16px; font-size:0.88rem; line-height:1.6; }
+  .ai-bubble.user { align-self:flex-end; background:var(--green-mid); color:white; border-bottom-right-radius:4px; }
+  .ai-bubble.assistant { align-self:flex-start; background:white; color:var(--text); border:1px solid var(--border); border-bottom-left-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+  .ai-bubble.assistant img { max-width:100%; border-radius:8px; margin-bottom:6px; display:block; }
+  .ai-bubble.user img { max-width:100%; border-radius:8px; margin-bottom:6px; display:block; }
+  .ai-bubble.thinking { color:var(--text-muted); font-style:italic; }
+  .ai-input-bar { background:white; border-top:1px solid var(--border); padding:10px 12px; display:flex; align-items:flex-end; gap:8px; flex-shrink:0; padding-bottom:max(10px, env(safe-area-inset-bottom)); }
+  .ai-input-bar textarea { flex:1; border:1.5px solid var(--border); border-radius:12px; padding:9px 12px; font-family:'DM Sans',sans-serif; font-size:0.9rem; resize:none; outline:none; max-height:100px; min-height:40px; color:var(--text); background:var(--bg); }
+  .ai-input-bar textarea:focus { border-color:var(--green-mid); }
+  .ai-action-btn { width:40px; height:40px; border-radius:50%; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+  .ai-send-btn { background:var(--green-mid); color:white; }
+  .ai-send-btn:active { background:var(--green-dark); }
+  .ai-mic-btn { background:var(--amber); color:white; }
+  .ai-mic-btn.listening { background:var(--red); animation:voicePulse 1s infinite; }
+  .ai-cam-btn { background:#e8f0e8; color:var(--green); }
+  .ai-image-preview { position:relative; margin-bottom:6px; }
+  .ai-image-preview img { width:70px; height:70px; object-fit:cover; border-radius:8px; border:2px solid var(--sage); }
+  .ai-image-preview .remove-img { position:absolute; top:-6px; right:-6px; background:var(--red); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:0.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .ai-welcome { text-align:center; padding:30px 20px; color:var(--text-muted); }
+  .ai-welcome .ai-welcome-icon { font-size:2.5rem; margin-bottom:10px; }
+  .ai-welcome h3 { font-family:'Playfair Display',serif; color:var(--green-dark); margin-bottom:8px; font-size:1.1rem; }
+  .ai-welcome p { font-size:0.85rem; line-height:1.6; }
+  .ai-suggestions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:14px; }
+  .ai-suggestion { background:white; border:1.5px solid var(--sage); border-radius:20px; padding:6px 14px; font-size:0.8rem; color:var(--green-dark); cursor:pointer; font-family:'DM Sans',sans-serif; }
+  .ai-suggestion:active { background:var(--sage); }
+
 </style>
 </head>
 <body>
@@ -263,7 +297,7 @@
 <div id="app" style="display:none;">
   <div class="header">
     <h1>🌿 Home Harvest</h1>
-    <div style="display:flex;align-items:center;gap:8px;"><button class="btn-icon" onclick="openSettings()" title="Settings" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">⚙️</button><div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">?</div></div>
+    <div style="display:flex;align-items:center;gap:8px;"><button class="btn-icon" onclick="openAIChat()" title="Ask AI" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">🤖</button><button class="btn-icon" onclick="openSettings()" title="Settings" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">⚙️</button><div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">?</div></div>
   </div>
   <div class="user-menu" id="user-menu">
     <div class="user-menu-name">
@@ -497,6 +531,46 @@
       <button class="btn-secondary" onclick="closePhotoHistoryModal()">Close</button>
       <button class="btn-primary" onclick="addAnotherPhoto()">📷 Add Photo</button>
     </div>
+  </div>
+</div>
+
+<!-- HIDDEN CAMERA INPUT FOR AI CHAT -->
+<input type="file" id="ai-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleAIPhotoSelected(event)">
+
+<!-- AI CHAT OVERLAY -->
+<div class="ai-overlay" id="ai-overlay">
+  <div class="ai-header">
+    <h2>🤖 Garden AI</h2>
+    <div class="ai-header-actions">
+      <button class="btn-icon" onclick="clearAIChat()" title="Clear chat" style="background:rgba(255,255,255,0.1);color:white;font-size:0.85rem;">🗑️</button>
+      <button class="btn-icon" onclick="closeAIChat()" title="Close" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">✕</button>
+    </div>
+  </div>
+  <div class="ai-messages" id="ai-messages">
+    <div class="ai-welcome">
+      <div class="ai-welcome-icon">🌿</div>
+      <h3>Your Garden Assistant</h3>
+      <p>Ask me anything about your garden — pests, watering, planting times, companion planting, and more. You can also attach a photo!</p>
+      <div class="ai-suggestions">
+        <button class="ai-suggestion" onclick="sendAISuggestion(this)">When should I plant tomatoes?</button>
+        <button class="ai-suggestion" onclick="sendAISuggestion(this)">What pests should I watch for?</button>
+        <button class="ai-suggestion" onclick="sendAISuggestion(this)">Best companion plants for peppers?</button>
+        <button class="ai-suggestion" onclick="sendAISuggestion(this)">When is my first frost date?</button>
+      </div>
+    </div>
+  </div>
+  <!-- Image preview above input bar -->
+  <div id="ai-image-preview-bar" style="display:none;padding:6px 12px;background:white;border-top:1px solid var(--border);">
+    <div class="ai-image-preview">
+      <img id="ai-preview-thumb" src="" alt="Attached photo">
+      <button class="remove-img" onclick="removeAIImage()">✕</button>
+    </div>
+  </div>
+  <div class="ai-input-bar">
+    <button class="ai-action-btn ai-cam-btn" onclick="openAICamera()" title="Attach photo">📷</button>
+    <textarea id="ai-input" placeholder="Ask about your garden…" rows="1" onkeydown="aiInputKeydown(event)" oninput="autoResizeAIInput(this)"></textarea>
+    <button class="ai-action-btn ai-mic-btn" id="ai-mic-btn" onclick="startAIVoice()" title="Speak">🎤</button>
+    <button class="ai-action-btn ai-send-btn" onclick="sendAIMessage()" title="Send">➤</button>
   </div>
 </div>
 
@@ -1732,6 +1806,235 @@ function closePhotoHistoryModal() {
 document.getElementById('photo-modal').addEventListener('click', e => { if (e.target === document.getElementById('photo-modal')) closePhotoModal(); });
 document.getElementById('photo-history-modal').addEventListener('click', e => { if (e.target === document.getElementById('photo-history-modal')) closePhotoHistoryModal(); });
 
+
+
+// ══════════════════════════════════════════
+//  AI CHAT
+// ══════════════════════════════════════════
+let aiChatHistory    = [];   // [{role, content}] sent to Gemini each turn
+let aiPendingImage   = null; // {base64, mime, dataUrl} if photo attached
+let aiMicListening   = false;
+
+const AI_SYSTEM_PROMPT = `You are a friendly, knowledgeable home garden assistant for a garden in Tulsa, Oklahoma (USDA Zone 7a). 
+The gardener uses the Home Harvest app to track their plants, tasks, and harvests.
+You help with all gardening topics: planting schedules, pest identification, disease diagnosis, watering, fertilizing, companion planting, soil health, and seasonal advice.
+Always tailor advice to Zone 7a / Tulsa climate: last frost ~April 1, first frost ~November 1, hot humid summers, mild winters.
+Keep answers friendly, practical, and concise — this is a mobile app. Use bullet points for lists.
+If a photo is shared, analyze it for plant health, pest, or disease issues.
+Stay focused on gardening topics. If asked about something unrelated, gently redirect to gardening.`;
+
+function buildAIContext() {
+  const plantList  = plants.length ? plants.map(p => `${p.name}${p.variety?' ('+p.variety+')':''} in ${p.bed||'unknown bed'}, status: ${p.status}`).join('; ') : 'No plants recorded yet';
+  const taskList   = tasks.filter(t => t.completed === 'N').slice(0,5).map(t => t.title).join('; ') || 'No pending tasks';
+  return `\n\nCurrent garden context:\nPlants: ${plantList}\nPending tasks: ${taskList}`;
+}
+
+function openAIChat() {
+  document.getElementById('ai-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('ai-input').focus(), 300);
+}
+
+function closeAIChat() {
+  document.getElementById('ai-overlay').classList.remove('open');
+}
+
+function clearAIChat() {
+  if (aiChatHistory.length && !confirm('Clear this conversation?')) return;
+  aiChatHistory = [];
+  aiPendingImage = null;
+  removeAIImage();
+  document.getElementById('ai-messages').innerHTML = `
+    <div class="ai-welcome">
+      <div class="ai-welcome-icon">🌿</div>
+      <h3>Your Garden Assistant</h3>
+      <p>Ask me anything about your garden — pests, watering, planting times, companion planting, and more. You can also attach a photo!</p>
+      <div class="ai-suggestions">
+        <button class="ai-suggestion" onclick="sendAISuggestion(this)">When should I plant tomatoes?</button>
+        <button class="ai-suggestion" onclick="sendAISuggestion(this)">What pests should I watch for?</button>
+        <button class="ai-suggestion" onclick="sendAISuggestion(this)">Best companion plants for peppers?</button>
+        <button class="ai-suggestion" onclick="sendAISuggestion(this)">When is my first frost date?</button>
+      </div>
+    </div>`;
+}
+
+function sendAISuggestion(btn) {
+  document.getElementById('ai-input').value = btn.textContent;
+  sendAIMessage();
+}
+
+function aiInputKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAIMessage(); }
+}
+
+function autoResizeAIInput(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ── Camera ──
+function openAICamera() {
+  const input = document.getElementById('ai-photo-input');
+  input.value = '';
+  input.click();
+}
+
+function handleAIPhotoSelected(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    aiPendingImage = { base64: dataUrl.split(',')[1], mime: file.type, dataUrl };
+    document.getElementById('ai-preview-thumb').src = dataUrl;
+    document.getElementById('ai-image-preview-bar').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeAIImage() {
+  aiPendingImage = null;
+  document.getElementById('ai-image-preview-bar').style.display = 'none';
+  document.getElementById('ai-preview-thumb').src = '';
+  document.getElementById('ai-photo-input').value = '';
+}
+
+// ── Voice ──
+function startAIVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('Voice not supported in this browser.'); return; }
+  if (aiMicListening) return;
+  const rec = new SpeechRecognition();
+  rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
+  aiMicListening = true;
+  document.getElementById('ai-mic-btn').classList.add('listening');
+  rec.start();
+  rec.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    document.getElementById('ai-input').value = transcript;
+    autoResizeAIInput(document.getElementById('ai-input'));
+  };
+  rec.onend = () => { aiMicListening = false; document.getElementById('ai-mic-btn').classList.remove('listening'); };
+  rec.onerror = () => { aiMicListening = false; document.getElementById('ai-mic-btn').classList.remove('listening'); showToast('Could not hear you — try again.'); };
+}
+
+// ── Send message ──
+async function sendAIMessage() {
+  const key   = localStorage.getItem('hh_gemini_key');
+  const input = document.getElementById('ai-input');
+  const text  = input.value.trim();
+  if (!text && !aiPendingImage) return;
+  if (!key) { openSettings(); showToast('Add your Gemini API key in Settings first.'); return; }
+
+  // Clear welcome screen on first message
+  const msgContainer = document.getElementById('ai-messages');
+  const welcome = msgContainer.querySelector('.ai-welcome');
+  if (welcome) welcome.remove();
+
+  // Build user message parts for display and API
+  const userParts = [];
+  let userBubbleHTML = '';
+  if (aiPendingImage) {
+    userBubbleHTML += `<img src="${aiPendingImage.dataUrl}" alt="Attached photo">`;
+    userParts.push({ inline_data: { mime_type: aiPendingImage.mime, data: aiPendingImage.base64 } });
+  }
+  if (text) {
+    userBubbleHTML += escHtml(text);
+    userParts.push({ text });
+  }
+
+  // Show user bubble
+  appendAIBubble('user', userBubbleHTML);
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Add to history for API (text only for history, image sent inline)
+  const historyUserContent = text || '[photo]';
+  aiChatHistory.push({ role: 'user', content: historyUserContent });
+
+  // Clear image
+  const imageForThisMessage = aiPendingImage;
+  removeAIImage();
+
+  // Show thinking bubble
+  const thinkingId = 'thinking-' + Date.now();
+  appendAIBubble('assistant thinking', '<span id="' + thinkingId + '">Thinking…</span>');
+  scrollAIToBottom();
+
+  // Build messages array for Gemini
+  // Include system context in first user message
+  const contextNote = buildAIContext();
+  const messages = [];
+  // Add history (excluding current message)
+  for (let i = 0; i < aiChatHistory.length - 1; i++) {
+    const h = aiChatHistory[i];
+    messages.push({ role: h.role, parts: [{ text: h.content }] });
+  }
+  // Add current message with image if present
+  const currentParts = [];
+  if (messages.length === 0) currentParts.push({ text: AI_SYSTEM_PROMPT + contextNote + '\n\n' }); // inject system context on first message
+  if (imageForThisMessage) currentParts.push({ inline_data: { mime_type: imageForThisMessage.mime, data: imageForThisMessage.base64 } });
+  if (text) currentParts.push({ text: messages.length === 0 ? text : text });
+  else if (!imageForThisMessage) currentParts.push({ text: '' });
+  messages.push({ role: 'user', parts: currentParts });
+
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
+      body: JSON.stringify({ contents: messages })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'API error');
+    }
+    const data  = await res.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+
+    // Remove thinking bubble, show real response
+    const thinkingBubble = document.getElementById(thinkingId)?.closest('.ai-bubble');
+    if (thinkingBubble) thinkingBubble.remove();
+    appendAIBubble('assistant', formatAIResponse(reply));
+    aiChatHistory.push({ role: 'model', content: reply });
+  } catch (e) {
+    const thinkingBubble = document.getElementById(thinkingId)?.closest('.ai-bubble');
+    if (thinkingBubble) thinkingBubble.remove();
+    appendAIBubble('assistant', 'Sorry, something went wrong: ' + e.message);
+    console.error('AI Chat error:', e);
+  }
+  scrollAIToBottom();
+}
+
+function appendAIBubble(role, html) {
+  const div = document.createElement('div');
+  div.className = 'ai-bubble ' + role;
+  div.innerHTML = html;
+  document.getElementById('ai-messages').appendChild(div);
+  scrollAIToBottom();
+}
+
+function scrollAIToBottom() {
+  const msgs = document.getElementById('ai-messages');
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function formatAIResponse(text) {
+  // Convert markdown-ish formatting to HTML
+  return escHtml(text)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^• (.+)$/gm, '<li>$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s, '<ul style="margin:6px 0 6px 16px;padding:0;">$1</ul>')
+    .replace(/\n/g, '<br>');
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('ai-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('ai-overlay')) closeAIChat();
+});
 
 // ══════════════════════════════════════════
 //  SETTINGS — GEMINI API KEY
