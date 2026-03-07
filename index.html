@@ -221,6 +221,14 @@
 
 
   /* PHOTO */
+  .tag-photo { background: #e8f0e8; color: var(--green); cursor: pointer; }
+  .tag-photo:hover { background: var(--sage); }
+  .photo-history-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .photo-history-item img { width: 100%; max-height: 200px; object-fit: cover; display: block; }
+  .photo-history-meta { padding: 10px 12px; }
+  .photo-history-date { font-size: 0.8rem; font-weight: 600; color: var(--green-dark); margin-bottom: 6px; }
+  .photo-history-diagnosis { font-size: 0.83rem; color: var(--text); line-height: 1.55; }
+  .photo-history-actions { padding: 8px 12px 12px; display: flex; gap: 8px; }
   .plant-photo { width: 100%; border-radius: 10px; margin-bottom: 10px; max-height: 200px; object-fit: cover; cursor: pointer; }
   .photo-btn { background: #e8f0e8; color: var(--green); border: 1.5px solid var(--sage); border-radius: 10px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 38px; margin-top: 8px; }
   .photo-btn:active { background: var(--sage); }
@@ -450,15 +458,44 @@
 <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelected(event)">
 
 <!-- PHOTO DIAGNOSIS MODAL -->
+<!-- PHOTO DIAGNOSIS MODAL (new photo) -->
 <div class="modal-overlay" id="photo-modal">
   <div class="modal">
     <div class="modal-handle"></div>
     <h2 class="modal-title" id="photo-modal-title">Plant Photo</h2>
     <img id="photo-preview" src="" alt="Plant photo" style="width:100%;border-radius:10px;margin-bottom:12px;max-height:260px;object-fit:cover;display:none;">
     <div id="photo-diagnosis-area"></div>
-    <div class="modal-actions" style="margin-top:16px;">
+    <!-- Task creation form (shown after diagnosis) -->
+    <div id="photo-task-form" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+      <div class="diagnosis-title" style="margin-bottom:10px;">📋 Create Task from Diagnosis</div>
+      <div class="form-group"><label class="form-label">Task Title *</label><input class="form-input" id="pt-title" type="text" placeholder="e.g. Treat tomatoes for aphids"></div>
+      <div class="form-group"><label class="form-label">Due Date</label><input class="form-input" id="pt-due" type="date"></div>
+      <div class="form-group">
+        <label class="form-label">Add to Google Calendar?</label>
+        <select class="form-select" id="pt-cal"><option value="yes">Yes</option><option value="no">No</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="pt-notes" placeholder="Details about the issue…" rows="3"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="cancelPhotoTask()">Cancel</button>
+        <button class="btn-primary" onclick="savePhotoTask()">Save Task</button>
+      </div>
+    </div>
+    <div class="modal-actions" id="photo-main-actions" style="margin-top:16px;">
       <button class="btn-secondary" onclick="closePhotoModal()">Close</button>
       <button class="btn-primary" id="btn-save-photo" onclick="savePhotoToPlant()" style="display:none;">Save to Plant</button>
+    </div>
+  </div>
+</div>
+
+<!-- PHOTO HISTORY MODAL (view all photos for a plant) -->
+<div class="modal-overlay" id="photo-history-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" id="photo-history-title">📷 Photo History</h2>
+    <div id="photo-history-list" style="max-height:65vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-secondary" onclick="closePhotoHistoryModal()">Close</button>
+      <button class="btn-primary" onclick="addAnotherPhoto()">📷 Add Photo</button>
     </div>
   </div>
 </div>
@@ -670,7 +707,7 @@ async function deleteSheetRow(sheetName, itemsSnapshot, id) {
 async function loadAllData() {
   setSyncStatus('syncing', 'Loading your garden…');
   try {
-    await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare()]);
+    await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare(), loadPhotos()]);
     setSyncStatus('synced', 'All data loaded ✓');
   } catch (e) {
     setSyncStatus('error', 'Could not load — check your connection');
@@ -805,7 +842,7 @@ function setBedFilter(bed) { bedFilter = bed; renderPlants(); }
 function plantCard(p) {
   const sc = {Seedling:'status-seedling',Growing:'status-growing',Flowering:'status-flowering','Ready to Harvest':'status-ready',Done:'status-done'}[p.status]||'';
   const ds = p.date ? new Date(p.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-  return `<div class="card">${p.photo?`<img class="plant-photo" src="${esc(p.photo)}" alt="${esc(p.name)}" onclick="viewPlantPhoto('${p.id}')">`:''}<div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions"><button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}</div>`;
+  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions"><button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''} ${photoCount(p.id)}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}</div>`;
 }
 
 // ══════════════════════════════════════════
@@ -1406,60 +1443,138 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 
 
 // ══════════════════════════════════════════
-//  PHOTO — CAPTURE & UPLOAD TO DRIVE
+//  PHOTO — CAPTURE, UPLOAD, HISTORY & TASKS
 // ══════════════════════════════════════════
+let photos             = [];   // all photo records loaded from Photos sheet
 let currentPhotoPlantId = null;
-let currentPhotoBase64  = null;
 let currentPhotoMime    = null;
 let currentPhotoFileId  = null;
+let currentDiagnosisText = null;
+let currentPhotoDataUrl  = null;
 
+// ── Load Photos sheet ──
+async function loadPhotos() {
+  try {
+    const d = await sheetsReq('GET', '/values/Photos!A2:F');
+    photos = (d.values || []).map(r => ({
+      id: r[0]||'', plantId: r[1]||'', plantName: r[2]||'',
+      date: r[3]||'', fileId: r[4]||'', diagnosis: r[5]||''
+    })).filter(p => p.id);
+  } catch(e) { console.error('Photos load error:', e); photos = []; }
+}
+
+async function savePhotoSheet(photo) {
+  const row = [photo.id, photo.plantId, photo.plantName, photo.date, photo.fileId, photo.diagnosis];
+  await sheetsReq('POST', '/values/Photos!A:F:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+}
+
+// ── Photo count badge on plant card ──
+function photoCount(plantId) {
+  const n = photos.filter(p => p.plantId === plantId).length;
+  if (!n) return '';
+  return `<span class="tag tag-photo" onclick="event.stopPropagation();openPhotoHistory('${plantId}')">📷 ${n} photo${n>1?'s':''}</span>`;
+}
+
+// ── Open camera/gallery ──
 function openPhotoCapture(plantId) {
   currentPhotoPlantId = plantId;
-  currentPhotoBase64  = null;
   currentPhotoFileId  = null;
-  // Trigger native camera/gallery picker
+  currentDiagnosisText = null;
+  currentPhotoDataUrl  = null;
   const input = document.getElementById('photo-input');
   input.value = '';
   input.click();
 }
 
+// ── Handle selected photo ──
 async function handlePhotoSelected(event) {
   const file = event.target.files?.[0];
   if (!file) return;
   currentPhotoMime = file.type;
 
-  // Read file as base64
   const reader = new FileReader();
   reader.onload = async (e) => {
-    const dataUrl   = e.target.result;
-    currentPhotoBase64 = dataUrl.split(',')[1];
+    currentPhotoDataUrl = e.target.result;
+    const base64 = currentPhotoDataUrl.split(',')[1];
+    const plant  = plants.find(p => p.id === currentPhotoPlantId);
 
-    // Show preview modal immediately
-    const plant = plants.find(p => p.id === currentPhotoPlantId);
+    // Show modal with preview + analyzing state
     document.getElementById('photo-modal-title').textContent = plant ? plant.name : 'Plant Photo';
-    document.getElementById('photo-preview').src = dataUrl;
+    document.getElementById('photo-preview').src = currentPhotoDataUrl;
     document.getElementById('photo-preview').style.display = 'block';
     document.getElementById('photo-diagnosis-area').innerHTML = '<div class="diagnosis-analyzing"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Analyzing plant health with Gemini…</div>';
     document.getElementById('btn-save-photo').style.display = 'none';
+    document.getElementById('photo-task-form').style.display = 'none';
+    document.getElementById('photo-main-actions').style.display = 'flex';
     document.getElementById('photo-modal').classList.add('open');
 
     // Run Gemini analysis and Drive upload in parallel
     const [diagnosis] = await Promise.all([
-      analyzePhotoWithGemini(currentPhotoBase64, currentPhotoMime, plant?.name || 'plant'),
+      analyzePhotoWithGemini(base64, currentPhotoMime, plant?.name || 'plant'),
       uploadPhotoToDrive(file, plant)
     ]);
+    currentDiagnosisText = diagnosis;
 
-    // Show diagnosis result
+    // Show diagnosis with "+ Create Task" option
     document.getElementById('photo-diagnosis-area').innerHTML = `
       <div class="diagnosis-box">
         <div class="diagnosis-title">🌿 Gemini Health Check</div>
-        ${diagnosis}
-      </div>`;
+        <div id="diagnosis-text">${diagnosis}</div>
+      </div>
+      <button class="photo-btn" onclick="showPhotoTaskForm()" style="margin-top:10px;">
+        ＋ Create Task from this Diagnosis
+      </button>`;
     document.getElementById('btn-save-photo').style.display = 'block';
   };
   reader.readAsDataURL(file);
 }
 
+// ── Show task creation form ──
+function showPhotoTaskForm() {
+  const plant = plants.find(p => p.id === currentPhotoPlantId);
+  // Pre-fill title with plant name + action hint
+  const diagnosisLower = (currentDiagnosisText || '').toLowerCase();
+  let titleHint = plant ? `Check ${plant.name}` : 'Check plant';
+  if (diagnosisLower.includes('pest') || diagnosisLower.includes('aphid') || diagnosisLower.includes('insect')) titleHint = `Treat ${plant?.name || 'plant'} for pests`;
+  else if (diagnosisLower.includes('disease') || diagnosisLower.includes('fungus') || diagnosisLower.includes('blight')) titleHint = `Treat ${plant?.name || 'plant'} for disease`;
+  else if (diagnosisLower.includes('water') || diagnosisLower.includes('dry') || diagnosisLower.includes('wilting')) titleHint = `Water ${plant?.name || 'plant'}`;
+  else if (diagnosisLower.includes('nutrient') || diagnosisLower.includes('yellow') || diagnosisLower.includes('fertiliz')) titleHint = `Fertilize ${plant?.name || 'plant'}`;
+
+  document.getElementById('pt-title').value = titleHint;
+  document.getElementById('pt-due').value   = new Date().toISOString().split('T')[0];
+  document.getElementById('pt-notes').value = currentDiagnosisText || '';
+  document.getElementById('pt-cal').value   = 'yes';
+  document.getElementById('photo-task-form').style.display = 'block';
+  document.getElementById('photo-main-actions').style.display = 'none';
+  document.querySelector('#photo-task-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelPhotoTask() {
+  document.getElementById('photo-task-form').style.display = 'none';
+  document.getElementById('photo-main-actions').style.display = 'flex';
+}
+
+async function savePhotoTask() {
+  const title = document.getElementById('pt-title').value.trim();
+  if (!title) { showToast('Please enter a task title.'); return; }
+  const task = {
+    id: uid(), title,
+    due: document.getElementById('pt-due').value,
+    completed: 'N', calEventId: '',
+    notes: document.getElementById('pt-notes').value.trim()
+  };
+  const addToCal = document.getElementById('pt-cal').value === 'yes';
+  tasks.push(task);
+  if (addToCal && task.due) {
+    const calId = await createCalEvent(task);
+    if (calId) { task.calEventId = calId; tasks[tasks.length-1] = task; }
+  }
+  try { await saveTaskSheet(task, true); renderTasks(); showToast('✅ Task saved!'); }
+  catch(e) { showToast('Task saved locally — sync error.'); }
+  cancelPhotoTask();
+}
+
+// ── Gemini vision analysis ──
 async function analyzePhotoWithGemini(base64, mime, plantName) {
   const key = localStorage.getItem('hh_gemini_key');
   if (!key) return 'Add your Gemini API key in Settings to get health analysis.';
@@ -1482,9 +1597,9 @@ async function analyzePhotoWithGemini(base64, mime, plantName) {
   }
 }
 
+// ── Upload to Google Drive ──
 async function uploadPhotoToDrive(file, plant) {
   try {
-    // Step 1: Find or create Home Harvest folder
     let folderId = localStorage.getItem('hh_drive_folder');
     if (!folderId) {
       const search = await fetch("https://www.googleapis.com/drive/v3/files?q=name%3D'Home+Harvest'+and+mimeType%3D'application%2Fvnd.google-apps.folder'+and+trashed%3Dfalse&fields=files(id)", {
@@ -1494,7 +1609,6 @@ async function uploadPhotoToDrive(file, plant) {
       if (sData.files?.length) {
         folderId = sData.files[0].id;
       } else {
-        // Create folder
         const create = await fetch('https://www.googleapis.com/drive/v3/files', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
@@ -1506,26 +1620,16 @@ async function uploadPhotoToDrive(file, plant) {
       localStorage.setItem('hh_drive_folder', folderId);
     }
 
-    // Step 2: Upload photo using multipart upload
-    const timestamp  = new Date().toISOString().split('T')[0];
-    const fileName   = `${plant?.name || 'plant'}-${timestamp}-${uid()}.jpg`;
-    const metadata   = { name: fileName, parents: [folderId] };
-    const boundary   = 'hh_boundary_' + Date.now();
-    const reader     = new FileReader();
+    const timestamp = new Date().toISOString().split('T')[0];
+    const fileName  = `${plant?.name || 'plant'}-${timestamp}-${uid()}.jpg`;
+    const metadata  = { name: fileName, parents: [folderId] };
+    const boundary  = 'hh_boundary_' + Date.now();
 
     return new Promise((resolve) => {
-      reader.onload = async (e) => {
-        const base64Data = e.target.result.split(',')[1];
-        const body = `--${boundary}
-Content-Type: application/json
-
-${JSON.stringify(metadata)}
---${boundary}
-Content-Type: ${file.type}
-Content-Transfer-Encoding: base64
-
-${base64Data}
---${boundary}--`;
+      const r2 = new FileReader();
+      r2.onload = async (e2) => {
+        const base64Data = e2.target.result.split(',')[1];
+        const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${file.type}\r\nContent-Transfer-Encoding: base64\r\n\r\n${base64Data}\r\n--${boundary}--`;
         const upload = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
@@ -1533,13 +1637,11 @@ ${base64Data}
         });
         if (upload.ok) {
           const uData = await upload.json();
-          currentPhotoFileId = uData.webViewLink || uData.id;
+          currentPhotoFileId = uData.id; // store file ID for thumbnail
           resolve(uData);
-        } else {
-          resolve(null);
-        }
+        } else { resolve(null); }
       };
-      reader.readAsDataURL(file);
+      r2.readAsDataURL(file);
     });
   } catch (e) {
     console.error('Drive upload error:', e);
@@ -1547,40 +1649,89 @@ ${base64Data}
   }
 }
 
+// ── Save photo record to Photos sheet ──
 async function savePhotoToPlant() {
   const plant = plants.find(p => p.id === currentPhotoPlantId);
   if (!plant) { closePhotoModal(); return; }
-
-  // Save Drive file link to plant record
-  if (currentPhotoFileId) {
-    plant.photo = currentPhotoFileId;
-    const i = plants.findIndex(p => p.id === plant.id);
-    if (i > -1) plants[i] = plant;
-    renderPlants();
-    try { await savePlantSheet(plant, false); setSyncStatus('synced', 'Photo saved ✓'); }
-    catch (e) { showToast('Could not save photo link — try again.'); }
-  }
+  const today = new Date().toISOString().split('T')[0];
+  const photo = {
+    id: uid(), plantId: plant.id, plantName: plant.name,
+    date: today, fileId: currentPhotoFileId || '',
+    diagnosis: currentDiagnosisText || ''
+  };
+  photos.push(photo);
+  renderPlants(); // refresh photo count badges
+  try {
+    await savePhotoSheet(photo);
+    setSyncStatus('synced', 'Photo saved ✓');
+    showToast('📷 Photo saved!');
+  } catch(e) { showToast('Photo saved locally — sync error.'); }
   closePhotoModal();
-  showToast('📷 Photo saved!');
 }
 
-function viewPlantPhoto(plantId) {
-  const plant = plants.find(p => p.id === plantId); if (!plant || !plant.photo) return;
-  document.getElementById('photo-modal-title').textContent = plant.name;
-  document.getElementById('photo-preview').src = plant.photo;
-  document.getElementById('photo-preview').style.display = 'block';
-  document.getElementById('photo-diagnosis-area').innerHTML = '';
-  document.getElementById('btn-save-photo').style.display = 'none';
-  document.getElementById('photo-modal').classList.add('open');
+// ── View photo history for a plant ──
+function openPhotoHistory(plantId) {
+  const plant   = plants.find(p => p.id === plantId);
+  const plantPhotos = photos.filter(p => p.plantId === plantId)
+    .sort((a,b) => b.date.localeCompare(a.date));
+  document.getElementById('photo-history-title').textContent = `📷 ${plant?.name || 'Plant'} Photos`;
+  document.getElementById('photo-history-modal').setAttribute('data-plant-id', plantId);
+
+  if (!plantPhotos.length) {
+    document.getElementById('photo-history-list').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">No photos yet.</p>';
+  } else {
+    document.getElementById('photo-history-list').innerHTML = plantPhotos.map(ph => {
+      const imgSrc = ph.fileId ? `https://drive.google.com/thumbnail?id=${ph.fileId}&sz=w600` : '';
+      return `<div class="photo-history-item">
+        ${imgSrc ? `<img src="${imgSrc}" alt="Plant photo" onerror="this.style.display='none'">` : ''}
+        <div class="photo-history-meta">
+          <div class="photo-history-date">📅 ${formatDate(ph.date)}</div>
+          ${ph.diagnosis ? `<div class="photo-history-diagnosis">${ph.diagnosis}</div>` : ''}
+        </div>
+        ${ph.diagnosis ? `<div class="photo-history-actions">
+          <button class="photo-btn" style="font-size:0.8rem;padding:6px 12px;" onclick="createTaskFromHistory('${ph.plantId}','${ph.plantName}',\`${ph.diagnosis.replace(/`/g,"'")}\`)">＋ Create Task</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('photo-history-modal').classList.add('open');
+}
+
+function addAnotherPhoto() {
+  const plantId = document.getElementById('photo-history-modal').getAttribute('data-plant-id');
+  closePhotoHistoryModal();
+  if (plantId) openPhotoCapture(plantId);
+}
+
+function createTaskFromHistory(plantId, plantName, diagnosis) {
+  closePhotoHistoryModal();
+  // Switch to Tasks tab and open pre-filled task modal
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector('[data-tab="tasks"]')?.classList.add('active');
+  document.getElementById('tab-tasks')?.classList.add('active');
+  openTaskModal();
+  setTimeout(() => {
+    document.getElementById('t-title').value = `Check ${plantName}`;
+    document.getElementById('t-due').value   = new Date().toISOString().split('T')[0];
+    document.getElementById('t-notes').value = diagnosis;
+    document.getElementById('t-cal').value   = 'yes';
+  }, 100);
 }
 
 function closePhotoModal() {
   document.getElementById('photo-modal').classList.remove('open');
-  currentPhotoPlantId = null;
-  currentPhotoBase64  = null;
-  currentPhotoFileId  = null;
+  currentPhotoPlantId  = null;
+  currentPhotoFileId   = null;
+  currentDiagnosisText = null;
+  currentPhotoDataUrl  = null;
+}
+function closePhotoHistoryModal() {
+  document.getElementById('photo-history-modal').classList.remove('open');
 }
 document.getElementById('photo-modal').addEventListener('click', e => { if (e.target === document.getElementById('photo-modal')) closePhotoModal(); });
+document.getElementById('photo-history-modal').addEventListener('click', e => { if (e.target === document.getElementById('photo-history-modal')) closePhotoHistoryModal(); });
+
 
 // ══════════════════════════════════════════
 //  SETTINGS — GEMINI API KEY
