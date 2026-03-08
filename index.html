@@ -285,6 +285,20 @@
   .ai-suggestion { background:white; border:1.5px solid var(--sage); border-radius:20px; padding:6px 14px; font-size:0.8rem; color:var(--green-dark); cursor:pointer; font-family:'DM Sans',sans-serif; }
   .ai-suggestion:active { background:var(--sage); }
 
+
+  /* PRODUCT LOG */
+  .product-section { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px; }
+  .product-section-title { font-size: 0.78rem; font-weight: 600; color: var(--green-dark); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .product-photo-btn { display: flex; align-items: center; gap: 8px; background: #e8f0e8; border: 1.5px solid var(--sage); border-radius: 10px; padding: 8px 14px; font-size: 0.85rem; color: var(--green-dark); cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; margin-bottom: 10px; }
+  .product-thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; border: 2px solid var(--sage); margin-bottom: 8px; cursor: pointer; }
+  .product-analyzing { color: var(--text-muted); font-style: italic; font-size: 0.83rem; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .product-badge { display: inline-flex; align-items: center; gap: 4px; background: #fff3e0; border: 1px solid #ffcc80; border-radius: 20px; padding: 2px 8px; font-size: 0.75rem; color: #e65100; font-weight: 500; margin-right: 4px; }
+  .product-history { margin-top: 8px; }
+  .product-history-item { background: #f9fdf9; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 0.82rem; }
+  .product-history-date { font-weight: 600; color: var(--green-dark); margin-bottom: 2px; }
+  .product-history-name { color: var(--text); }
+  .product-history-detail { color: var(--text-muted); font-size: 0.78rem; }
+
 </style>
 </head>
 <body>
@@ -461,6 +475,27 @@
       </select>
     </div>
     <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="t-notes" placeholder="Optional details…"></textarea></div>
+    <!-- PRODUCT LOG SECTION -->
+    <div class="product-section">
+      <div class="product-section-title">🧴 Product Used (optional)</div>
+      <button class="product-photo-btn" onclick="openProductPhoto('task')">📷 Photograph Product Label — Auto-fill details</button>
+      <img id="t-product-thumb" src="" style="display:none;" class="product-thumb" onclick="openProductPhoto('task')">
+      <div id="t-product-analyzing" class="product-analyzing" style="display:none;"><div class="spinner" style="width:16px;height:16px;border-width:2px;"></div> Reading label…</div>
+      <div class="form-group"><label class="form-label">Product Name</label><input class="form-input" id="t-product-name" type="text" placeholder="e.g. Miracle-Gro, Sevin Dust"></div>
+      <div class="form-group"><label class="form-label">Type</label>
+        <select class="form-select" id="t-product-type">
+          <option value="">— None —</option>
+          <option value="Fertilizer">🌱 Fertilizer</option>
+          <option value="Pesticide">🐛 Pesticide</option>
+          <option value="Herbicide">🌿 Herbicide</option>
+          <option value="Fungicide">🍄 Fungicide</option>
+          <option value="Other">📦 Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Amount Applied</label><input class="form-input" id="t-product-amount" type="text" placeholder="e.g. 2 tbsp per gallon, light dusting"></div>
+      <div class="form-group"><label class="form-label">Product Notes</label><textarea class="form-textarea" id="t-product-notes" placeholder="e.g. NPK, mixing instructions, what it treated…" rows="2"></textarea></div>
+      <input type="hidden" id="t-product-photo-id">
+    </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeTaskModal()">Cancel</button>
       <button class="btn-primary" onclick="saveTask()">Save Task</button>
@@ -495,6 +530,27 @@
     </div>
     <div class="form-group"><label class="form-label">First Due Date</label><input class="form-input" id="c-next" type="date"></div>
     <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="c-notes" placeholder="Optional care notes…"></textarea></div>
+    <!-- PRODUCT LOG SECTION -->
+    <div class="product-section">
+      <div class="product-section-title">🧴 Default Product (optional)</div>
+      <button class="product-photo-btn" onclick="openProductPhoto('care')">📷 Photograph Product Label — Auto-fill details</button>
+      <img id="c-product-thumb" src="" style="display:none;" class="product-thumb" onclick="openProductPhoto('care')">
+      <div id="c-product-analyzing" class="product-analyzing" style="display:none;"><div class="spinner" style="width:16px;height:16px;border-width:2px;"></div> Reading label…</div>
+      <div class="form-group"><label class="form-label">Product Name</label><input class="form-input" id="c-product-name" type="text" placeholder="e.g. Miracle-Gro, Sevin Dust"></div>
+      <div class="form-group"><label class="form-label">Type</label>
+        <select class="form-select" id="c-product-type">
+          <option value="">— None —</option>
+          <option value="Fertilizer">🌱 Fertilizer</option>
+          <option value="Pesticide">🐛 Pesticide</option>
+          <option value="Herbicide">🌿 Herbicide</option>
+          <option value="Fungicide">🍄 Fungicide</option>
+          <option value="Other">📦 Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Amount Applied</label><input class="form-input" id="c-product-amount" type="text" placeholder="e.g. 2 tbsp per gallon, light dusting"></div>
+      <div class="form-group"><label class="form-label">Product Notes</label><textarea class="form-textarea" id="c-product-notes" placeholder="e.g. NPK, mixing instructions, what it treated…" rows="2"></textarea></div>
+      <input type="hidden" id="c-product-photo-id">
+    </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeCareModal()">Cancel</button>
       <button class="btn-primary" onclick="saveCare()">Save Schedule</button>
@@ -505,6 +561,7 @@
 
 <!-- HIDDEN FILE INPUT FOR PHOTO -->
 <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelected(event)">
+<input type="file" id="product-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleProductPhotoSelected(event)">
 
 <!-- PHOTO DIAGNOSIS MODAL -->
 <!-- PHOTO DIAGNOSIS MODAL (new photo) -->
@@ -545,6 +602,36 @@
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn-secondary" onclick="closePhotoHistoryModal()">Close</button>
       <button class="btn-primary" onclick="addAnotherPhoto()">📷 Add Photo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MARK DONE PRODUCT MODAL -->
+<div class="modal-overlay" id="markdone-product-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">🧴 Product Used</h2>
+    <p id="md-care-label" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;font-style:italic;"></p>
+    <button class="product-photo-btn" onclick="openProductPhoto('md')">📷 Photograph Product Label — Auto-fill</button>
+    <img id="md-product-thumb" src="" style="display:none;" class="product-thumb" onclick="openProductPhoto('md')">
+    <div id="md-product-analyzing" class="product-analyzing" style="display:none;"><div class="spinner" style="width:16px;height:16px;border-width:2px;"></div> Reading label…</div>
+    <div class="form-group"><label class="form-label">Product Name</label><input class="form-input" id="md-product-name" type="text" placeholder="e.g. Miracle-Gro, Sevin Dust"></div>
+    <div class="form-group"><label class="form-label">Type</label>
+      <select class="form-select" id="md-product-type">
+        <option value="">— None —</option>
+        <option value="Fertilizer">🌱 Fertilizer</option>
+        <option value="Pesticide">🐛 Pesticide</option>
+        <option value="Herbicide">🌿 Herbicide</option>
+        <option value="Fungicide">🍄 Fungicide</option>
+        <option value="Other">📦 Other</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Amount Applied</label><input class="form-input" id="md-product-amount" type="text" placeholder="e.g. 2 tbsp per gallon"></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="md-product-notes" placeholder="e.g. NPK, mixing instructions, what it treated…" rows="2"></textarea></div>
+    <input type="hidden" id="md-product-photo-id">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="skipMarkDoneProduct()">Skip</button>
+      <button class="btn-primary" onclick="confirmMarkDoneProduct()">Mark Done</button>
     </div>
   </div>
 </div>
@@ -803,19 +890,21 @@ async function saveHarvestSheet(harvest, isNew) {
 
 // ── TASKS ──
 async function loadTasks() {
-  const d = await sheetsReq('GET', '/values/Tasks!A2:F');
+  const d = await sheetsReq('GET', '/values/Tasks!A2:K');
   tasks = (d.values || []).map(r => ({
-    id: r[0]||'', title: r[1]||'', due: r[2]||'', completed: r[3]||'N', calEventId: r[4]||'', notes: r[5]||''
+    id: r[0]||'', title: r[1]||'', due: r[2]||'', completed: r[3]||'N', calEventId: r[4]||'', notes: r[5]||'',
+    productName: r[6]||'', productType: r[7]||'', productAmount: r[8]||'', productNotes: r[9]||'', productPhotoId: r[10]||''
   })).filter(t => t.id && t.title);
   renderTasks();
 }
 async function saveTaskSheet(task, isNew) {
-  const row = [task.id, task.title, task.due, task.completed, task.calEventId, task.notes];
+  const row = [task.id, task.title, task.due, task.completed, task.calEventId, task.notes,
+    task.productName||'', task.productType||'', task.productAmount||'', task.productNotes||'', task.productPhotoId||''];
   if (isNew) {
-    await sheetsReq('POST', '/values/Tasks!A:F:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+    await sheetsReq('POST', '/values/Tasks!A:K:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
   } else {
     const n = tasks.findIndex(t => t.id === task.id) + 2;
-    await sheetsReq('PUT', `/values/Tasks!A${n}:F${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+    await sheetsReq('PUT', `/values/Tasks!A${n}:K${n}?valueInputOption=USER_ENTERED`, { values: [row] });
   }
 }
 
@@ -888,10 +977,34 @@ function renderPlants() {
   }
 }
 function setBedFilter(bed) { bedFilter = bed; renderPlants(); }
+function getPlantProductHistory(plantName) {
+  // Gather all product applications for a plant from both care schedules and tasks
+  const careProducts = careSchedules.filter(c =>
+    c.plant.toLowerCase() === plantName.toLowerCase() && c.productName && c.lastDone
+  ).map(c => ({ date: c.lastDone, productName: c.productName, productType: c.productType, productAmount: c.productAmount }));
+
+  const taskProducts = tasks.filter(t =>
+    t.productName && t.title.toLowerCase().includes(plantName.toLowerCase())
+  ).map(t => ({ date: t.due, productName: t.productName, productType: t.productType, productAmount: t.productAmount }));
+
+  return [...careProducts, ...taskProducts]
+    .filter(p => p.productName)
+    .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+}
+
 function plantCard(p) {
   const sc = {Seedling:'status-seedling',Growing:'status-growing',Flowering:'status-flowering','Ready to Harvest':'status-ready',Done:'status-done'}[p.status]||'';
   const ds = p.date ? new Date(p.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions"><button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''} ${photoCount(p.id)}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}</div>`;
+  const productHistory = getPlantProductHistory(p.name);
+  const productHistoryHtml = productHistory.length ? `<div class="product-history">
+    <div style="font-size:0.78rem;font-weight:600;color:var(--green-dark);margin-bottom:6px;">🧴 Products Applied</div>
+    ${productHistory.slice(0,3).map(pr => `<div class="product-history-item">
+      <div class="product-history-date">${pr.date ? formatDate(pr.date) : ''} · ${esc(pr.productType||'Product')}</div>
+      <div class="product-history-name">${esc(pr.productName)}</div>
+      ${pr.productAmount?`<div class="product-history-detail">${esc(pr.productAmount)}</div>`:''}
+    </div>`).join('')}
+  </div>` : '';
+  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions"><button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''} ${photoCount(p.id)}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}${productHistoryHtml}</div>`;
 }
 
 // ══════════════════════════════════════════
@@ -958,7 +1071,7 @@ function renderTasks() {
                `<span class="tag tag-date">📅 ${due.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`;
     }
     const calTag = t.calEventId ? `<span class="tag tag-cal">📆 In Calendar</span>` : '';
-    return `<div class="task-card${done?' done':''}"><div class="task-check${done?' checked':''}" onclick="toggleTask('${t.id}')">${done?'✓':''}</div><div class="task-body"><div class="task-title">${esc(t.title)}</div><div class="task-meta">${dueTag}${calTag}</div>${t.notes?`<div class="card-notes">${esc(t.notes)}</div>`:''}</div><div class="card-actions"><button class="btn-icon" onclick="openTaskModal('${t.id}')">✏️</button></div></div>`;
+    return `<div class="task-card${done?' done':''}"><div class="task-check${done?' checked':''}" onclick="toggleTask('${t.id}')">${done?'✓':''}</div><div class="task-body"><div class="task-title">${esc(t.title)}</div><div class="task-meta">${dueTag}${calTag}${productBadge(t)}</div>${t.notes?`<div class="card-notes">${esc(t.notes)}</div>`:''}</div><div class="card-actions"><button class="btn-icon" onclick="openTaskModal('${t.id}')">✏️</button></div></div>`;
   }).join('');
 }
 
@@ -1076,6 +1189,7 @@ async function deleteHarvest() {
 // ══════════════════════════════════════════
 function openTaskModal(id = null) {
   const del = document.getElementById('btn-delete-task');
+  clearProductFields('t');
   if (id) {
     const t = tasks.find(x => x.id === id); if (!t) return;
     document.getElementById('task-modal-title').textContent = 'Edit Task';
@@ -1083,7 +1197,8 @@ function openTaskModal(id = null) {
     document.getElementById('t-title').value = t.title;
     document.getElementById('t-due').value   = t.due;
     document.getElementById('t-notes').value = t.notes;
-    document.getElementById('t-cal').value   = 'no'; // Don't re-add to calendar on edit
+    document.getElementById('t-cal').value   = 'no';
+    loadProductFields('t', t);
     del.style.display = 'block'; del.setAttribute('data-id', id);
   } else {
     document.getElementById('task-modal-title').textContent = 'Add Task';
@@ -1107,7 +1222,12 @@ async function saveTask() {
   const isNew    = !editId;
   const addToCal = document.getElementById('t-cal').value === 'yes';
   const existing = isNew ? null : tasks.find(t => t.id === editId);
-  const task = { id: isNew ? uid() : editId, title, due: document.getElementById('t-due').value, completed: existing ? existing.completed : 'N', calEventId: existing ? existing.calEventId : '', notes: document.getElementById('t-notes').value.trim() };
+  const task = { id: isNew ? uid() : editId, title, due: document.getElementById('t-due').value, completed: existing ? existing.completed : 'N', calEventId: existing ? existing.calEventId : '', notes: document.getElementById('t-notes').value.trim(),
+    productName: document.getElementById('t-product-name').value.trim(),
+    productType: document.getElementById('t-product-type').value,
+    productAmount: document.getElementById('t-product-amount').value.trim(),
+    productNotes: document.getElementById('t-product-notes').value.trim(),
+    productPhotoId: document.getElementById('t-product-photo-id').value };
   if (isNew) tasks.push(task); else { const i = tasks.findIndex(t => t.id === editId); if (i > -1) tasks[i] = task; }
   closeTaskModal(); renderTasks(); showToast(isNew ? 'Task added!' : 'Task updated!');
   // Create Google Calendar event if requested (new tasks only)
@@ -1152,21 +1272,23 @@ async function deleteTask() {
 let careSchedules = [];
 
 async function loadCare() {
-  const d = await sheetsReq('GET', '/values/Care Schedule!A2:G');
+  const d = await sheetsReq('GET', '/values/Care Schedule!A2:L');
   careSchedules = (d.values || []).map(r => ({
     id: r[0]||'', plant: r[1]||'', type: r[2]||'', freqDays: parseInt(r[3]||'1'),
-    lastDone: r[4]||'', nextDue: r[5]||'', calEventId: r[6]||''
+    lastDone: r[4]||'', nextDue: r[5]||'', calEventId: r[6]||'',
+    productName: r[7]||'', productType: r[8]||'', productAmount: r[9]||'', productNotes: r[10]||'', productPhotoId: r[11]||''
   })).filter(c => c.id && c.plant);
   renderCare();
 }
 
 async function saveCareSheet(care, isNew) {
-  const row = [care.id, care.plant, care.type, care.freqDays, care.lastDone, care.nextDue, care.calEventId];
+  const row = [care.id, care.plant, care.type, care.freqDays, care.lastDone, care.nextDue, care.calEventId,
+    care.productName||'', care.productType||'', care.productAmount||'', care.productNotes||'', care.productPhotoId||''];
   if (isNew) {
-    await sheetsReq('POST', '/values/Care Schedule!A:G:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+    await sheetsReq('POST', '/values/Care Schedule!A:L:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
   } else {
     const n = careSchedules.findIndex(c => c.id === care.id) + 2;
-    await sheetsReq('PUT', `/values/Care Schedule!A${n}:G${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+    await sheetsReq('PUT', `/values/Care Schedule!A${n}:L${n}?valueInputOption=USER_ENTERED`, { values: [row] });
   }
 }
 
@@ -1186,6 +1308,33 @@ let undoState = null;
 async function markCareDone(id) {
   const care = careSchedules.find(c => c.id === id); if (!care) return;
 
+  // If care type involves a product application, prompt to log product
+  const productTypes = ['Fertilizing', 'Pest Treatment'];
+  if (productTypes.includes(care.type) || care.productName) {
+    openMarkDoneProductModal(id);
+    return;
+  }
+  _doMarkCareDone(id, null);
+}
+
+function openMarkDoneProductModal(id) {
+  const care = careSchedules.find(c => c.id === id); if (!care) return;
+  currentProductContext = { mode: 'markdone', careId: id };
+  clearProductFields('md');
+  // Pre-fill from care schedule default product if exists
+  if (care.productName) {
+    document.getElementById('md-product-name').value   = care.productName;
+    document.getElementById('md-product-type').value   = care.productType || '';
+    document.getElementById('md-product-amount').value = care.productAmount || '';
+    document.getElementById('md-product-notes').value  = care.productNotes || '';
+  }
+  document.getElementById('md-care-label').textContent = care.type + ' — ' + care.plant;
+  document.getElementById('markdone-product-modal').classList.add('open');
+}
+
+async function _doMarkCareDone(id, productOverride) {
+  const care = careSchedules.find(c => c.id === id); if (!care) return;
+
   // Save previous state for undo
   undoState = {
     id,
@@ -1197,6 +1346,15 @@ async function markCareDone(id) {
 
   const today   = new Date().toISOString().split('T')[0];
   const nextDue = addDays(today, care.freqDays);
+
+  // Apply product override if provided (what was actually used today)
+  if (productOverride) {
+    care.productName    = productOverride.productName;
+    care.productType    = productOverride.productType;
+    care.productAmount  = productOverride.productAmount;
+    care.productNotes   = productOverride.productNotes;
+    care.productPhotoId = productOverride.productPhotoId;
+  }
 
   // Optimistic UI update
   care.lastDone   = today;
@@ -1318,7 +1476,7 @@ function renderCare() {
           <button class="btn-icon" onclick="openCareModal('${c.id}')">✏️</button>
         </div>
       </div>
-      <div class="card-tags">${dueTag}${lastTag}${calTag}</div>
+      <div class="card-tags">${dueTag}${lastTag}${calTag}${productBadge(c)}</div>
       <div style="margin-top:10px;">
         <button class="btn-done" onclick="markCareDone('${c.id}')">✓ Mark Done</button>
       </div>
@@ -1351,6 +1509,7 @@ function openCareModal(id = null) {
     }
     document.getElementById('c-next').value        = c.nextDue;
     document.getElementById('c-notes').value       = '';
+    loadProductFields('c', c);
     del.style.display = 'block'; del.setAttribute('data-id', id);
   } else {
     document.getElementById('care-modal-title').textContent = 'Add Care Schedule';
@@ -1361,6 +1520,7 @@ function openCareModal(id = null) {
     document.getElementById('c-freq-unit').value   = 'days';
     document.getElementById('c-next').value        = new Date().toISOString().split('T')[0];
     document.getElementById('c-notes').value       = '';
+    clearProductFields('c');
     del.style.display = 'none';
   }
   document.getElementById('care-modal').classList.add('open');
@@ -1389,7 +1549,12 @@ async function saveCare() {
     freqDays,
     lastDone:   existing ? existing.lastDone : '',
     nextDue,
-    calEventId: existing ? existing.calEventId : ''
+    calEventId: existing ? existing.calEventId : '',
+    productName:    document.getElementById('c-product-name').value.trim(),
+    productType:    document.getElementById('c-product-type').value,
+    productAmount:  document.getElementById('c-product-amount').value.trim(),
+    productNotes:   document.getElementById('c-product-notes').value.trim(),
+    productPhotoId: document.getElementById('c-product-photo-id').value
   };
 
   // Optimistic update
@@ -1782,6 +1947,188 @@ document.getElementById('photo-modal').addEventListener('click', e => { if (e.ta
 document.getElementById('photo-history-modal').addEventListener('click', e => { if (e.target === document.getElementById('photo-history-modal')) closePhotoHistoryModal(); });
 
 
+
+
+// ══════════════════════════════════════════
+//  PRODUCT LOG — PHOTO & GEMINI LABEL READING
+// ══════════════════════════════════════════
+let currentProductContext = null; // {mode: 'task'|'care'|'markdone'}
+
+function openProductPhoto(mode) {
+  currentProductContext = { mode };
+  const input = document.getElementById('product-photo-input');
+  input.value = '';
+  input.click();
+}
+
+async function handleProductPhotoSelected(event) {
+  const file = event.target.files?.[0];
+  if (!file || !currentProductContext) return;
+  const mode = currentProductContext.mode;
+  const prefix = mode; // 't', 'c', or 'md'
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    const base64  = dataUrl.split(',')[1];
+
+    // Show thumbnail immediately
+    const thumb = document.getElementById(prefix + '-product-thumb');
+    if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
+    const analyzing = document.getElementById(prefix + '-product-analyzing');
+    if (analyzing) analyzing.style.display = 'flex';
+
+    // Upload to Drive in background for storage
+    let fileId = '';
+    try {
+      const uploaded = await uploadProductPhotoToDrive(file);
+      if (uploaded) fileId = uploaded.id || '';
+      const photoIdEl = document.getElementById(prefix + '-product-photo-id');
+      if (photoIdEl) photoIdEl.value = fileId;
+    } catch(e) { console.error('Product photo upload error:', e); }
+
+    // Read label with Gemini vision
+    const details = await readProductLabel(base64, file.type);
+    if (analyzing) analyzing.style.display = 'none';
+
+    if (details) {
+      const name   = document.getElementById(prefix + '-product-name');
+      const type   = document.getElementById(prefix + '-product-type');
+      const amount = document.getElementById(prefix + '-product-amount');
+      const notes  = document.getElementById(prefix + '-product-notes');
+      if (name   && details.name)   name.value   = details.name;
+      if (type   && details.type)   type.value   = details.type;
+      if (amount && details.amount) amount.value = details.amount;
+      if (notes  && details.notes)  notes.value  = details.notes;
+      showToast('📷 Label read — check the details!');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function readProductLabel(base64, mime) {
+  const key = localStorage.getItem('hh_gemini_key');
+  if (!key) { showToast('Add your Gemini API key in Settings to auto-read labels.'); return null; }
+  try {
+    const prompt = `Look at this garden product label. Extract the following details and respond ONLY with a JSON object (no markdown):
+{
+  "name": "full product name and brand",
+  "type": "one of: Fertilizer, Pesticide, Herbicide, Fungicide, Other",
+  "amount": "recommended application rate from the label (e.g. '2 tbsp per gallon', '1 lb per 100 sq ft')",
+  "notes": "key info in one sentence: NPK if fertilizer, active ingredient if pesticide/herbicide, or what it treats"
+}
+If you cannot read a field clearly, use an empty string for that field.`;
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: base64 } }] }] })
+    });
+    if (!res.ok) throw new Error('API error');
+    const data  = await res.json();
+    const raw   = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    return JSON.parse(clean);
+  } catch(e) {
+    console.error('Label read error:', e);
+    showToast('Could not read label — fill in manually.');
+    return null;
+  }
+}
+
+async function uploadProductPhotoToDrive(file) {
+  try {
+    let folderId = localStorage.getItem('hh_drive_folder');
+    if (!folderId) {
+      const search = await fetch("https://www.googleapis.com/drive/v3/files?q=name%3D'Home+Harvest'+and+mimeType%3D'application%2Fvnd.google-apps.folder'+and+trashed%3Dfalse&fields=files(id)", {
+        headers: { Authorization: 'Bearer ' + accessToken }
+      });
+      const sData = await search.json();
+      folderId = sData.files?.[0]?.id;
+      if (!folderId) {
+        const create = await fetch('https://www.googleapis.com/drive/v3/files', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Home Harvest', mimeType: 'application/vnd.google-apps.folder' })
+        });
+        folderId = (await create.json()).id;
+      }
+      localStorage.setItem('hh_drive_folder', folderId);
+    }
+    const metadata = { name: 'product-' + uid() + '.jpg', parents: [folderId] };
+    const boundary = 'hh_prod_' + Date.now();
+    return new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = async (e2) => {
+        const b64 = e2.target.result.split(',')[1];
+        const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${file.type}\r\nContent-Transfer-Encoding: base64\r\n\r\n${b64}\r\n--${boundary}--`;
+        const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
+          body
+        });
+        resolve(up.ok ? await up.json() : null);
+      };
+      r.readAsDataURL(file);
+    });
+  } catch(e) { console.error('Product upload error:', e); return null; }
+}
+
+// ── Helpers to load/clear product fields in modals ──
+function clearProductFields(prefix) {
+  ['product-name','product-type','product-amount','product-notes','product-photo-id'].forEach(f => {
+    const el = document.getElementById(prefix + '-' + f);
+    if (el) el.value = '';
+  });
+  const thumb = document.getElementById(prefix + '-product-thumb');
+  if (thumb) { thumb.src = ''; thumb.style.display = 'none'; }
+}
+
+function loadProductFields(prefix, record) {
+  const fields = { 'product-name': record.productName, 'product-type': record.productType,
+    'product-amount': record.productAmount, 'product-notes': record.productNotes, 'product-photo-id': record.productPhotoId };
+  Object.entries(fields).forEach(([f, v]) => {
+    const el = document.getElementById(prefix + '-' + f);
+    if (el && v) el.value = v;
+  });
+  if (record.productPhotoId) {
+    const thumb = document.getElementById(prefix + '-product-thumb');
+    if (thumb) {
+      thumb.src = `https://drive.google.com/thumbnail?id=${record.productPhotoId}&sz=w200`;
+      thumb.style.display = 'block';
+    }
+  }
+}
+
+// ── Mark Done product modal actions ──
+function skipMarkDoneProduct() {
+  document.getElementById('markdone-product-modal').classList.remove('open');
+  const id = currentProductContext?.careId;
+  currentProductContext = null;
+  if (id) _doMarkCareDone(id, null);
+}
+
+function confirmMarkDoneProduct() {
+  const id = currentProductContext?.careId;
+  const productOverride = {
+    productName:    document.getElementById('md-product-name').value.trim(),
+    productType:    document.getElementById('md-product-type').value,
+    productAmount:  document.getElementById('md-product-amount').value.trim(),
+    productNotes:   document.getElementById('md-product-notes').value.trim(),
+    productPhotoId: document.getElementById('md-product-photo-id').value
+  };
+  document.getElementById('markdone-product-modal').classList.remove('open');
+  currentProductContext = null;
+  if (id) _doMarkCareDone(id, productOverride);
+}
+document.getElementById('markdone-product-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('markdone-product-modal')) skipMarkDoneProduct();
+});
+
+// ── Show product badge on task cards ──
+function productBadge(record) {
+  if (!record.productName) return '';
+  return `<span class="product-badge">🧴 ${esc(record.productName)}</span>`;
+}
 
 // ══════════════════════════════════════════
 //  SETTINGS — GEMINI API KEY
