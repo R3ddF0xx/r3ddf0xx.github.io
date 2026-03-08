@@ -237,13 +237,28 @@
   .diagnosis-analyzing { color: var(--text-muted); font-style: italic; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 
 
+
+  /* PHOTO */
+  .tag-photo { background: #e8f0e8; color: var(--green); cursor: pointer; }
+  .tag-photo:hover { background: var(--sage); }
+  .photo-history-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+  .photo-history-item img { width: 100%; max-height: 200px; object-fit: cover; display: block; }
+  .photo-history-meta { padding: 10px 12px; }
+  .photo-history-date { font-size: 0.8rem; font-weight: 600; color: var(--green-dark); margin-bottom: 6px; }
+  .photo-history-diagnosis { font-size: 0.83rem; color: var(--text); line-height: 1.55; }
+  .photo-history-actions { padding: 8px 12px 12px; display: flex; gap: 8px; }
+  .plant-photo { width: 100%; border-radius: 10px; margin-bottom: 10px; max-height: 200px; object-fit: cover; cursor: pointer; }
+  .photo-btn { background: #e8f0e8; color: var(--green); border: 1.5px solid var(--sage); border-radius: 10px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 38px; margin-top: 8px; }
+  .photo-btn:active { background: var(--sage); }
+  .diagnosis-box { background: #f0f7f0; border: 1.5px solid var(--sage); border-radius: 10px; padding: 12px 14px; margin-top: 10px; font-size: 0.85rem; line-height: 1.6; color: var(--text); }
+  .diagnosis-title { font-weight: 600; color: var(--green-dark); margin-bottom: 6px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .diagnosis-analyzing { color: var(--text-muted); font-style: italic; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+
+
   /* AI CHAT */
-  .ai-overlay { display:none; position:fixed; inset:0; background:#1a1a1a; z-index:300; flex-direction:column; }
-  .ai-overlay.open { display:flex; }
   .ai-header { background:var(--green-dark); color:white; padding:14px 16px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
   .ai-header h2 { font-family:'Playfair Display',serif; font-size:1.1rem; display:flex; align-items:center; gap:8px; }
   .ai-header-actions { display:flex; gap:8px; }
-  .ai-messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
   .ai-bubble { max-width:85%; padding:10px 14px; border-radius:16px; font-size:0.88rem; line-height:1.6; }
   .ai-bubble.user { align-self:flex-end; background:var(--green-mid); color:white; border-bottom-right-radius:4px; }
   .ai-bubble.assistant { align-self:flex-start; background:white; color:var(--text); border:1px solid var(--border); border-bottom-left-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
@@ -297,7 +312,7 @@
 <div id="app" style="display:none;">
   <div class="header">
     <h1>🌿 Home Harvest</h1>
-    <div style="display:flex;align-items:center;gap:8px;"><button class="btn-icon" onclick="openAIChat()" title="Ask AI" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">🤖</button><button class="btn-icon" onclick="openSettings()" title="Settings" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">⚙️</button><div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">?</div></div>
+    <div style="display:flex;align-items:center;gap:8px;"><button class="btn-icon" onclick="openSettings()" title="Settings" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">⚙️</button><div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">?</div></div>
   </div>
   <div class="user-menu" id="user-menu">
     <div class="user-menu-name">
@@ -534,48 +549,8 @@
   </div>
 </div>
 
-<!-- HIDDEN CAMERA INPUT FOR AI CHAT -->
-<input type="file" id="ai-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleAIPhotoSelected(event)">
-
-<!-- AI CHAT OVERLAY -->
-<div class="ai-overlay" id="ai-overlay">
-  <div class="ai-header">
-    <h2>🤖 Garden AI</h2>
-    <div class="ai-header-actions">
-      <button class="btn-icon" onclick="clearAIChat()" title="Clear chat" style="background:rgba(255,255,255,0.1);color:white;font-size:0.85rem;">🗑️</button>
-      <button class="btn-icon" onclick="closeAIChat()" title="Close" style="background:rgba(255,255,255,0.1);color:white;font-size:1rem;">✕</button>
-    </div>
-  </div>
-  <div class="ai-messages" id="ai-messages">
-    <div class="ai-welcome">
-      <div class="ai-welcome-icon">🌿</div>
-      <h3>Your Garden Assistant</h3>
-      <p>Ask me anything about your garden — pests, watering, planting times, companion planting, and more. You can also attach a photo!</p>
-      <div class="ai-suggestions">
-        <button class="ai-suggestion" onclick="sendAISuggestion(this)">When should I plant tomatoes?</button>
-        <button class="ai-suggestion" onclick="sendAISuggestion(this)">What pests should I watch for?</button>
-        <button class="ai-suggestion" onclick="sendAISuggestion(this)">Best companion plants for peppers?</button>
-        <button class="ai-suggestion" onclick="sendAISuggestion(this)">When is my first frost date?</button>
-      </div>
-    </div>
-  </div>
-  <!-- Image preview above input bar -->
-  <div id="ai-image-preview-bar" style="display:none;padding:6px 12px;background:white;border-top:1px solid var(--border);">
-    <div class="ai-image-preview">
-      <img id="ai-preview-thumb" src="" alt="Attached photo">
-      <button class="remove-img" onclick="removeAIImage()">✕</button>
-    </div>
-  </div>
-  <div class="ai-input-bar">
-    <button class="ai-action-btn ai-cam-btn" onclick="openAICamera()" title="Attach photo">📷</button>
-    <textarea id="ai-input" placeholder="Ask about your garden…" rows="1" onkeydown="aiInputKeydown(event)" oninput="autoResizeAIInput(this)"></textarea>
-    <button class="ai-action-btn ai-mic-btn" id="ai-mic-btn" title="Hold to talk" onpointerdown="startAIVoice(event)" onpointerup="stopAIVoice()" onpointercancel="stopAIVoice()" onpointerleave="stopAIVoice()">🎤</button>
-    <button class="ai-action-btn ai-send-btn" onclick="sendAIMessage()" title="Send">➤</button>
-  </div>
-</div>
-
 <!-- VOICE BUTTON -->
-<button class="voice-btn" id="voice-btn" onclick="startVoice()" title="Voice command">🎤</button>
+<button class="voice-btn" id="voice-btn" title="Hold to talk" onpointerdown="startVoice(event)" onpointerup="stopVoice()" onpointercancel="stopVoice()" onpointerleave="stopVoice()">🎤</button>
 
 <!-- VOICE MODAL -->
 <div class="modal-overlay" id="voice-modal">
@@ -1809,377 +1784,6 @@ document.getElementById('photo-history-modal').addEventListener('click', e => { 
 
 
 // ══════════════════════════════════════════
-//  AI CHAT
-// ══════════════════════════════════════════
-let aiChatHistory    = [];   // [{role, content}] sent to Gemini each turn
-let aiPendingImage   = null; // {base64, mime, dataUrl} if photo attached
-let aiMicListening   = false;
-
-// System prompt is a function so today's date is always current
-function getAISystemPrompt() {
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-  return `You are a friendly, knowledgeable home garden assistant for a garden in Tulsa, Oklahoma (USDA Zone 7a).
-The gardener uses the Home Harvest app to track their plants, tasks, and harvests.
-You help with all gardening topics: planting schedules, pest identification, disease diagnosis, watering, fertilizing, companion planting, soil health, and seasonal advice.
-Always tailor advice to Zone 7a / Tulsa climate: last frost ~April 1, first frost ~November 1, hot humid summers, mild winters.
-Keep answers friendly, practical, and concise — this is a mobile app. Use bullet points for lists.
-If a photo is shared, analyze it for plant health, pest, or disease issues.
-Stay focused on gardening topics. If asked about something unrelated, gently redirect to gardening.
-
-TODAY'S DATE: ${today}
-TOMORROW'S DATE: ${tomorrow}
-
-CRITICAL INSTRUCTION — TASK/REMINDER CREATION:
-When the user asks you to set a reminder, create a task, schedule something, or add anything to their calendar or to-do list, you MUST do TWO things:
-1. Reply with a short friendly confirmation message (1 sentence)
-2. On the very last line of your response, output ONLY this JSON with no extra text before or after it on that line:
-ACTION:{"type":"task","title":"TASK TITLE HERE","due":"YYYY-MM-DD","notes":"NOTES HERE"}
-
-Replace TASK TITLE HERE with a short clear task title.
-Replace YYYY-MM-DD with the correct date (use the dates provided above for relative terms like "tomorrow").
-Replace NOTES HERE with any relevant details or leave empty string.
-Do NOT say you have created the reminder without including the ACTION line — the ACTION line is what actually creates it.`;
-}
-
-function buildAIContext() {
-  const plantList  = plants.length ? plants.map(p => `${p.name}${p.variety?' ('+p.variety+')':''} in ${p.bed||'unknown bed'}, status: ${p.status}`).join('; ') : 'No plants recorded yet';
-  const taskList   = tasks.filter(t => t.completed === 'N').slice(0,5).map(t => t.title).join('; ') || 'No pending tasks';
-  return `\n\nCurrent garden context:\nPlants: ${plantList}\nPending tasks: ${taskList}`;
-}
-
-function openAIChat() {
-  document.getElementById('ai-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('ai-input').focus(), 300);
-}
-
-function closeAIChat() {
-  document.getElementById('ai-overlay').classList.remove('open');
-}
-
-function clearAIChat() {
-  if (aiChatHistory.length && !confirm('Clear this conversation?')) return;
-  aiChatHistory = [];
-  aiPendingImage = null;
-  removeAIImage();
-  document.getElementById('ai-messages').innerHTML = `
-    <div class="ai-welcome">
-      <div class="ai-welcome-icon">🌿</div>
-      <h3>Your Garden Assistant</h3>
-      <p>Ask me anything about your garden — pests, watering, planting times, companion planting, and more. You can also attach a photo!</p>
-      <div class="ai-suggestions">
-        <button class="ai-suggestion" onclick="sendAISuggestion(this)">When should I plant tomatoes?</button>
-        <button class="ai-suggestion" onclick="sendAISuggestion(this)">What pests should I watch for?</button>
-        <button class="ai-suggestion" onclick="sendAISuggestion(this)">Best companion plants for peppers?</button>
-        <button class="ai-suggestion" onclick="sendAISuggestion(this)">When is my first frost date?</button>
-      </div>
-    </div>`;
-}
-
-function sendAISuggestion(btn) {
-  document.getElementById('ai-input').value = btn.textContent;
-  sendAIMessage();
-}
-
-function aiInputKeydown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAIMessage(); }
-}
-
-function autoResizeAIInput(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-}
-
-// ── Camera ──
-function openAICamera() {
-  const input = document.getElementById('ai-photo-input');
-  input.value = '';
-  input.click();
-}
-
-function handleAIPhotoSelected(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const dataUrl = e.target.result;
-    aiPendingImage = { base64: dataUrl.split(',')[1], mime: file.type, dataUrl };
-    document.getElementById('ai-preview-thumb').src = dataUrl;
-    document.getElementById('ai-image-preview-bar').style.display = 'block';
-  };
-  reader.readAsDataURL(file);
-}
-
-function removeAIImage() {
-  aiPendingImage = null;
-  document.getElementById('ai-image-preview-bar').style.display = 'none';
-  document.getElementById('ai-preview-thumb').src = '';
-  document.getElementById('ai-photo-input').value = '';
-}
-
-// ── Voice ──
-let aiSpeechRec     = null;
-let aiButtonHeld    = false;  // true while finger/mouse is down
-let aiAccumulated   = '';     // builds up transcript across restarts
-
-function startAIVoice(event) {
-  event.preventDefault();
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) { showToast('Voice not supported in this browser.'); return; }
-
-  aiButtonHeld  = true;
-  aiAccumulated = '';
-  document.getElementById('ai-input').value = '';
-  _aiStartRecognition(SpeechRecognition);
-}
-
-function _aiStartRecognition(SpeechRecognition) {
-  if (!aiButtonHeld) return; // button was released before restart
-
-  aiSpeechRec = new SpeechRecognition();
-  aiSpeechRec.lang = 'en-US';
-  aiSpeechRec.interimResults = true;
-  aiSpeechRec.continuous = false; // false is more reliable; we restart manually on silence
-
-  aiMicListening = true;
-  const btn = document.getElementById('ai-mic-btn');
-  btn.classList.add('listening');
-  btn.textContent = '🔴';
-
-  aiSpeechRec.onresult = (e) => {
-    let interim = '';
-    let final   = '';
-    for (let i = 0; i < e.results.length; i++) {
-      if (e.results[i].isFinal) final   += e.results[i][0].transcript + ' ';
-      else                       interim += e.results[i][0].transcript;
-    }
-    if (final) aiAccumulated += final;
-    // Show accumulated + current interim in input field
-    document.getElementById('ai-input').value = (aiAccumulated + interim).trim();
-    autoResizeAIInput(document.getElementById('ai-input'));
-  };
-
-  aiSpeechRec.onend = () => {
-    aiSpeechRec = null;
-    if (aiButtonHeld) {
-      // Button still held — browser timed out on silence, restart immediately
-      aiMicListening = false;
-      _aiStartRecognition(SpeechRecognition);
-    } else {
-      // Button was released — clean up normally
-      aiMicListening = false;
-      const btn = document.getElementById('ai-mic-btn');
-      btn.classList.remove('listening');
-      btn.textContent = '🎤';
-    }
-  };
-
-  aiSpeechRec.onerror = (e) => {
-    aiSpeechRec = null;
-    if (e.error === 'aborted') return; // we caused this by stopping, ignore
-    if (e.error === 'no-speech' && aiButtonHeld) {
-      // No speech detected but button still held — restart silently
-      aiMicListening = false;
-      _aiStartRecognition(SpeechRecognition);
-      return;
-    }
-    aiMicListening = false;
-    aiButtonHeld   = false;
-    const btn = document.getElementById('ai-mic-btn');
-    btn.classList.remove('listening');
-    btn.textContent = '🎤';
-    if (e.error !== 'aborted') showToast('Could not hear you — try again.');
-  };
-
-  try { aiSpeechRec.start(); } catch(e) { /* already started */ }
-}
-
-function stopAIVoice() {
-  if (!aiButtonHeld) return;
-  aiButtonHeld = false;
-  if (aiSpeechRec) {
-    try { aiSpeechRec.stop(); } catch(e) { /* ignore */ }
-  } else {
-    // Already stopped (restarting), just clean up UI
-    aiMicListening = false;
-    const btn = document.getElementById('ai-mic-btn');
-    btn.classList.remove('listening');
-    btn.textContent = '🎤';
-  }
-}
-
-// ── Send message ──
-async function sendAIMessage() {
-  const key   = localStorage.getItem('hh_gemini_key');
-  const input = document.getElementById('ai-input');
-  const text  = input.value.trim();
-  if (!text && !aiPendingImage) return;
-  if (!key) { openSettings(); showToast('Add your Gemini API key in Settings first.'); return; }
-
-  // Clear welcome screen on first message
-  const msgContainer = document.getElementById('ai-messages');
-  const welcome = msgContainer.querySelector('.ai-welcome');
-  if (welcome) welcome.remove();
-
-  // Build user message parts for display and API
-  const userParts = [];
-  let userBubbleHTML = '';
-  if (aiPendingImage) {
-    userBubbleHTML += `<img src="${aiPendingImage.dataUrl}" alt="Attached photo">`;
-    userParts.push({ inline_data: { mime_type: aiPendingImage.mime, data: aiPendingImage.base64 } });
-  }
-  if (text) {
-    userBubbleHTML += escHtml(text);
-    userParts.push({ text });
-  }
-
-  // Show user bubble
-  appendAIBubble('user', userBubbleHTML);
-  input.value = '';
-  input.style.height = 'auto';
-
-  // Add to history for API (text only for history, image sent inline)
-  const historyUserContent = text || '[photo]';
-  aiChatHistory.push({ role: 'user', content: historyUserContent });
-
-  // Clear image
-  const imageForThisMessage = aiPendingImage;
-  removeAIImage();
-
-  // Show thinking bubble
-  const thinkingId = 'thinking-' + Date.now();
-  appendAIBubble('assistant thinking', '<span id="' + thinkingId + '">Thinking…</span>');
-  scrollAIToBottom();
-
-  // Build messages array for Gemini
-  // Include system context in first user message
-  const contextNote = buildAIContext();
-  const messages = [];
-  // Add history (excluding current message)
-  for (let i = 0; i < aiChatHistory.length - 1; i++) {
-    const h = aiChatHistory[i];
-    messages.push({ role: h.role, parts: [{ text: h.content }] });
-  }
-  // Add current message with image if present
-  const currentParts = [];
-  if (messages.length === 0) currentParts.push({ text: getAISystemPrompt() + contextNote + '\n\n' }); // inject system context on first message
-  if (imageForThisMessage) currentParts.push({ inline_data: { mime_type: imageForThisMessage.mime, data: imageForThisMessage.base64 } });
-  if (text) currentParts.push({ text: messages.length === 0 ? text : text });
-  else if (!imageForThisMessage) currentParts.push({ text: '' });
-  messages.push({ role: 'user', parts: currentParts });
-
-  try {
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
-      body: JSON.stringify({ contents: messages })
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || 'API error');
-    }
-    const data  = await res.json();
-    const rawReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
-
-    // Check for ACTION block
-    console.log('Gemini raw reply:', rawReply); // debug
-    const actionMatch = rawReply.match(/ACTION:(\{[^\n]+\})/);
-    let actionData = null;
-    let reply = rawReply;
-    if (actionMatch) {
-      try {
-        actionData = JSON.parse(actionMatch[1]);
-        reply = rawReply.replace(/ACTION:\{[^\n]+\}/, '').trim();
-        console.log('Action detected:', actionData);
-      } catch(e) { console.error('Action parse error:', e, actionMatch[1]); }
-    }
-
-    // Remove thinking bubble, show real response
-    const thinkingBubble = document.getElementById(thinkingId)?.closest('.ai-bubble');
-    if (thinkingBubble) thinkingBubble.remove();
-
-    let bubbleHTML = formatAIResponse(reply);
-    if (actionData && actionData.type === 'task') {
-      bubbleHTML += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.1);">
-        <button class="photo-btn" style="font-size:0.82rem;padding:7px 14px;" onclick="createTaskFromAI(${JSON.stringify(actionData).replace(/"/g,'&quot;')})">
-          ＋ Add to Tasks &amp; Calendar
-        </button>
-      </div>`;
-    }
-    appendAIBubble('assistant', bubbleHTML);
-    aiChatHistory.push({ role: 'model', content: reply });
-  } catch (e) {
-    const thinkingBubble = document.getElementById(thinkingId)?.closest('.ai-bubble');
-    if (thinkingBubble) thinkingBubble.remove();
-    appendAIBubble('assistant', 'Sorry, something went wrong: ' + e.message);
-    console.error('AI Chat error:', e);
-  }
-  scrollAIToBottom();
-}
-
-function appendAIBubble(role, html) {
-  const div = document.createElement('div');
-  div.className = 'ai-bubble ' + role;
-  div.innerHTML = html;
-  document.getElementById('ai-messages').appendChild(div);
-  scrollAIToBottom();
-}
-
-function scrollAIToBottom() {
-  const msgs = document.getElementById('ai-messages');
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function formatAIResponse(text) {
-  // Convert markdown-ish formatting to HTML
-  return escHtml(text)
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/^• (.+)$/gm, '<li>$1</li>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/s, '<ul style="margin:6px 0 6px 16px;padding:0;">$1</ul>')
-    .replace(/\n/g, '<br>');
-}
-
-async function createTaskFromAI(actionData) {
-  const task = {
-    id: uid(),
-    title: actionData.title || 'Garden task',
-    due: actionData.due || '',
-    completed: 'N',
-    calEventId: '',
-    notes: actionData.notes || ''
-  };
-  tasks.push(task);
-  renderTasks();
-  // Always try to add to Google Calendar if there's a due date
-  if (task.due) {
-    setSyncStatus('syncing', 'Adding to calendar…');
-    const calId = await createCalEvent(task);
-    if (calId) {
-      task.calEventId = calId;
-      tasks[tasks.findIndex(t => t.id === task.id)] = task;
-      renderTasks();
-    }
-  }
-  try {
-    await saveTaskSheet(task, true);
-    setSyncStatus('synced', 'Saved ✓');
-    showToast('✅ Task added' + (task.due ? ' & calendar event created!' : '!'));
-  } catch(e) {
-    showToast('Task saved locally — sync error.');
-  }
-}
-
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-document.getElementById('ai-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('ai-overlay')) closeAIChat();
-});
-
-// ══════════════════════════════════════════
 //  SETTINGS — GEMINI API KEY
 // ══════════════════════════════════════════
 function openSettings() {
@@ -2203,61 +1807,99 @@ function saveGeminiKey() {
 }
 
 // ══════════════════════════════════════════
-//  VOICE — SPEECH RECOGNITION
+//  VOICE — PUSH-TO-TALK SPEECH RECOGNITION
 // ══════════════════════════════════════════
-let voiceRecognition  = null;
-let pendingVoiceAction = null; // parsed action waiting for user confirmation
+let voiceRecognition   = null;
+let pendingVoiceAction = null;
+let voiceButtonHeld    = false;
+let voiceAccumulated   = '';
+const VoiceSR          = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-function startVoice() {
+function startVoice(event) {
+  event.preventDefault();
   const key = localStorage.getItem('hh_gemini_key');
-  if (!key) {
-    openSettings();
-    showToast('Please add your Gemini API key first.');
-    return;
-  }
-  // Check browser support
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    showToast('Voice not supported in this browser. Try Chrome.');
-    return;
-  }
-  voiceRecognition = new SR();
-  voiceRecognition.lang = 'en-US';
-  voiceRecognition.interimResults = false;
-  voiceRecognition.maxAlternatives = 1;
+  if (!key) { openSettings(); showToast('Please add your Gemini API key first.'); return; }
+  if (!VoiceSR) { showToast('Voice not supported in this browser. Try Chrome.'); return; }
 
-  document.getElementById('voice-btn').classList.add('listening');
+  voiceButtonHeld  = true;
+  voiceAccumulated = '';
+
   document.getElementById('voice-modal-title').textContent = 'Listening…';
-  document.getElementById('voice-transcript').textContent = 'Speak now…';
+  document.getElementById('voice-transcript').textContent = 'Hold the button and speak…';
   document.getElementById('voice-confirm').style.display = 'none';
   document.getElementById('voice-actions').style.display = 'none';
   document.getElementById('voice-loading').style.display = 'none';
   document.getElementById('voice-modal').classList.add('open');
 
-  voiceRecognition.onresult = async (e) => {
-    const transcript = e.results[0][0].transcript;
-    document.getElementById('voice-btn').classList.remove('listening');
-    document.getElementById('voice-transcript').textContent = '"' + transcript + '"';
-    document.getElementById('voice-loading').style.display = 'block';
-    document.getElementById('voice-modal-title').textContent = 'Understanding…';
-    await parseVoiceCommand(transcript);
+  _startVoiceRecognition();
+}
+
+function _startVoiceRecognition() {
+  if (!voiceButtonHeld) return;
+  voiceRecognition = new VoiceSR();
+  voiceRecognition.lang = 'en-US';
+  voiceRecognition.interimResults = true;
+  voiceRecognition.continuous = false;
+
+  document.getElementById('voice-btn').classList.add('listening');
+
+  voiceRecognition.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = 0; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final   += e.results[i][0].transcript + ' ';
+      else                       interim += e.results[i][0].transcript;
+    }
+    if (final) voiceAccumulated += final;
+    document.getElementById('voice-transcript').textContent = '"' + (voiceAccumulated + interim).trim() + '"';
   };
-  voiceRecognition.onerror = (e) => {
-    document.getElementById('voice-btn').classList.remove('listening');
-    document.getElementById('voice-modal-title').textContent = 'Could not hear you';
-    document.getElementById('voice-transcript').textContent = 'Please try again.';
-    document.getElementById('voice-loading').style.display = 'none';
-  };
+
   voiceRecognition.onend = () => {
-    document.getElementById('voice-btn').classList.remove('listening');
+    voiceRecognition = null;
+    if (voiceButtonHeld) {
+      // still holding — restart to keep listening through pauses
+      _startVoiceRecognition();
+    } else {
+      // released — process what we got
+      document.getElementById('voice-btn').classList.remove('listening');
+      const transcript = voiceAccumulated.trim();
+      if (transcript) {
+        document.getElementById('voice-loading').style.display = 'block';
+        document.getElementById('voice-modal-title').textContent = 'Understanding…';
+        parseVoiceCommand(transcript);
+      } else {
+        document.getElementById('voice-modal-title').textContent = 'Nothing heard';
+        document.getElementById('voice-transcript').textContent = 'Try holding the button and speaking clearly.';
+      }
+    }
   };
-  voiceRecognition.start();
+
+  voiceRecognition.onerror = (e) => {
+    voiceRecognition = null;
+    if (e.error === 'aborted') return;
+    if (e.error === 'no-speech' && voiceButtonHeld) { _startVoiceRecognition(); return; }
+    voiceButtonHeld = false;
+    document.getElementById('voice-btn').classList.remove('listening');
+    if (e.error !== 'aborted') showToast('Could not hear you — try again.');
+  };
+
+  try { voiceRecognition.start(); } catch(e) {}
+}
+
+function stopVoice() {
+  if (!voiceButtonHeld) return;
+  voiceButtonHeld = false;
+  if (voiceRecognition) {
+    try { voiceRecognition.stop(); } catch(e) {}
+  } else {
+    document.getElementById('voice-btn').classList.remove('listening');
+  }
 }
 
 function closeVoiceModal() {
+  voiceButtonHeld = false;
   document.getElementById('voice-modal').classList.remove('open');
   document.getElementById('voice-btn').classList.remove('listening');
-  if (voiceRecognition) { try { voiceRecognition.stop(); } catch(e) {} }
+  if (voiceRecognition) { try { voiceRecognition.stop(); } catch(e) {} voiceRecognition = null; }
   pendingVoiceAction = null;
 }
 document.getElementById('voice-modal').addEventListener('click', e => { if (e.target === document.getElementById('voice-modal')) closeVoiceModal(); });
@@ -2268,64 +1910,62 @@ document.getElementById('voice-modal').addEventListener('click', e => { if (e.ta
 async function parseVoiceCommand(transcript) {
   const key = localStorage.getItem('hh_gemini_key');
 
-  // Build context strings so Gemini knows what plants/schedules exist
-  const plantNames    = plants.map(p => p.name + (p.variety ? ' (' + p.variety + ')' : '')).join(', ') || 'none yet';
-  const careNames     = careSchedules.map(c => c.type + ' for ' + c.plant).join(', ') || 'none yet';
-  const today         = new Date().toISOString().split('T')[0];
+  const plantNames = plants.map(p => p.name + (p.variety ? ' (' + p.variety + ')' : '')).join(', ') || 'none yet';
+  const careNames  = careSchedules.map(c => c.type + ' for ' + c.plant).join(', ') || 'none yet';
+  const taskNames  = tasks.filter(t => t.completed === 'N').slice(0,5).map(t => t.title).join(', ') || 'none';
+  const today      = new Date().toISOString().split('T')[0];
+  const tomorrow   = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-  const prompt = `You are a garden assistant. Parse this voice command into a structured action.
-
-Current date: ${today}
+  const prompt = `You are a home garden assistant for a garden in Tulsa, Oklahoma (Zone 7a, last frost ~April 1, first frost ~November 1).
+Today: ${today}. Tomorrow: ${tomorrow}.
 Plants in garden: ${plantNames}
 Care schedules: ${careNames}
+Pending tasks: ${taskNames}
 
-Voice command: "${transcript}"
+The user said: "${transcript}"
 
-Respond ONLY with a JSON object (no markdown, no explanation) in one of these formats:
+First decide: is this a GARDEN QUESTION or a DATA ACTION?
 
-Log a harvest:
-{"action":"harvest","plant":"<exact plant name from list>","qty":"<number>","unit":"<count|lbs|oz|kg|g|bunches>","date":"${today}","notes":""}
+DATA ACTIONS — respond with ONLY a JSON object (no markdown):
 
-Mark care done:
-{"action":"care_done","scheduleDesc":"<type> for <plant> matching the care schedules list>"}
+Log harvest: {"action":"harvest","plant":"<name>","qty":"<number>","unit":"<count|lbs|oz|kg|g|bunches>","date":"${today}","notes":""}
+Mark care done: {"action":"care_done","scheduleDesc":"<type> for <plant>"}
+Add task/reminder: {"action":"task","title":"<title>","due":"<YYYY-MM-DD or empty>","notes":""}
+Add plant: {"action":"plant","name":"<name>","variety":"<variety or empty>","bed":"<bed or empty>","qty":"<qty or empty>","date":"${today}"}
 
-Add a task:
-{"action":"task","title":"<task description>","due":"<YYYY-MM-DD or empty string>","notes":""}
+GARDEN QUESTIONS — if the user is asking a question or wants advice about gardening, pests, diseases, fertilizing, watering, planting times, companion plants, or anything garden-related, respond with:
+{"action":"question","answer":"<your helpful answer in 2-4 sentences, tailored to Tulsa Zone 7a>"}
 
-Add a plant:
-{"action":"plant","name":"<plant name>","variety":"<variety or empty>","bed":"<bed name or empty>","qty":"<quantity description or empty>","date":"${today}"}
+If truly unrecognized: {"action":"unknown","message":"<what was heard>"}
 
-If the command doesn't match any of these, respond with:
-{"action":"unknown","message":"<brief explanation of what was heard>"}
-
-Match plant names to the closest existing plant in the garden list when possible.`;
+Match plant names to closest existing plant when possible.`;
 
   try {
-    // Try gemini-1.5-flash first (most widely available), fall back to gemini-pro
     const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': key.trim()
-      },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
     if (!res.ok) {
       const err = await res.json();
-      // Show the actual API error message so user knows what's wrong
       throw new Error('API: ' + (err.error?.message || JSON.stringify(err.error) || 'Unknown error'));
     }
     const data   = await res.json();
     const raw    = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('Gemini raw response:', raw); // helpful for debugging
+    console.log('Gemini raw response:', raw);
     const clean  = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
     document.getElementById('voice-loading').style.display = 'none';
-    showVoiceConfirm(parsed, transcript);
+
+    if (parsed.action === 'question') {
+      // Show answer as a dismissible popup, no confirm screen needed
+      showVoiceAnswer(parsed.answer, transcript);
+    } else {
+      showVoiceConfirm(parsed, transcript);
+    }
   } catch (e) {
     document.getElementById('voice-loading').style.display = 'none';
     document.getElementById('voice-modal-title').textContent = 'Could not understand';
-    // Show the actual error so user can diagnose
     const msg = e.message || '';
     if (msg.startsWith('API:')) {
       document.getElementById('voice-transcript').textContent = msg.replace('API: ', '');
@@ -2336,6 +1976,24 @@ Match plant names to the closest existing plant in the garden list when possible
     }
     console.error('Gemini error:', e);
   }
+}
+
+// Show a garden question answer as a simple dismissible modal
+function showVoiceAnswer(answer, transcript) {
+  document.getElementById('voice-modal-title').textContent = '🌿 Garden Assistant';
+  document.getElementById('voice-transcript').textContent  = '"' + transcript + '"';
+  document.getElementById('voice-confirm').style.display   = 'block';
+  document.getElementById('voice-actions').style.display   = 'none';
+  document.getElementById('voice-loading').style.display   = 'none';
+  // Show answer in the fields area with a dismiss button
+  document.getElementById('voice-action-label').textContent = '';
+  document.getElementById('voice-fields').innerHTML = `
+    <div style="background:#f0f7f0;border:1.5px solid var(--sage);border-radius:10px;padding:12px 14px;font-size:0.88rem;line-height:1.6;color:var(--text);margin-bottom:12px;">
+      ${esc(answer)}
+    </div>`;
+  document.getElementById('voice-actions').innerHTML = `
+    <button class="btn-primary" onclick="closeVoiceModal()" style="width:100%;">Got it</button>`;
+  document.getElementById('voice-actions').style.display = 'flex';
 }
 
 // ══════════════════════════════════════════
