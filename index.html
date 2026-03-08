@@ -2334,6 +2334,8 @@ Match plant names to closest existing plant when possible.`;
     console.log('Gemini raw response:', raw);
     const clean  = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
+    console.log('Parsed action:', JSON.stringify(parsed)); // debug
+    console.log('Care schedules:', careSchedules.map(c => c.type + ' for ' + c.plant)); // debug
     document.getElementById('voice-loading').style.display = 'none';
 
     if (parsed.action === 'question') {
