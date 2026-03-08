@@ -674,6 +674,11 @@
     <div style="margin-top:20px;">
       <button class="btn-secondary" style="width:100%;" onclick="closeSettings()">Close</button>
     </div>
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+      <div style="font-size:0.8rem;font-weight:600;color:var(--green-dark);margin-bottom:8px;">🛠️ Data Tools</div>
+      <button class="btn-secondary" style="width:100%;font-size:0.85rem;" onclick="fixBedNames()">Fix Bed Name Capitalization</button>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">Normalizes all bed names to Title Case (e.g. "bed 3" → "Bed 3")</div>
+    </div>
   </div>
 </div>
 
@@ -860,6 +865,33 @@ async function loadPlants() {
   })).filter(p => p.id && p.name);
   renderPlants();
 }
+
+// ── Normalize bed name: title-case each word, e.g. "bed 3" → "Bed 3"
+
+async function fixBedNames() {
+  const toFix = plants.filter(p => p.bed && p.bed !== normalizeBed(p.bed));
+  if (!toFix.length) { showToast('All bed names already look good!'); return; }
+
+  const preview = [...new Set(toFix.map(p => `"${p.bed}" → "${normalizeBed(p.bed)}"`))].join(', ');
+  if (!confirm(`Fix ${toFix.length} plant(s)?\n\n${preview}`)) return;
+
+  let fixed = 0;
+  for (const plant of toFix) {
+    plant.bed = normalizeBed(plant.bed);
+    const i = plants.findIndex(p => p.id === plant.id);
+    if (i > -1) plants[i] = plant;
+    try { await savePlantSheet(plant, false); fixed++; } catch(e) { console.error('Fix error:', e); }
+  }
+  renderPlants();
+  closeSettings();
+  showToast(`✅ Fixed ${fixed} bed name${fixed !== 1 ? 's' : ''}!`);
+}
+
+function normalizeBed(bed) {
+  if (!bed) return '';
+  return bed.trim().replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1));
+}
+
 async function savePlantSheet(plant, isNew) {
   const row = [plant.id, plant.name, plant.variety, plant.bed, plant.date, plant.status, plant.harvest, plant.notes, plant.photo];
   if (isNew) {
@@ -1111,7 +1143,7 @@ async function savePlant() {
   if (!name) { showToast('Please enter a plant name.'); return; }
   const editId = document.getElementById('plant-edit-id').value;
   const isNew  = !editId;
-  const plant  = { id: isNew ? uid() : editId, name, variety: document.getElementById('f-variety').value.trim(), bed: document.getElementById('f-bed').value.trim(), qty: document.getElementById('f-qty').value.trim(), date: document.getElementById('f-date').value, status: document.getElementById('f-status').value, harvest: document.getElementById('f-harvest').value.trim(), notes: document.getElementById('f-notes').value.trim(), photo: '' };
+  const plant  = { id: isNew ? uid() : editId, name, variety: document.getElementById('f-variety').value.trim(), bed: normalizeBed(document.getElementById('f-bed').value), qty: document.getElementById('f-qty').value.trim(), date: document.getElementById('f-date').value, status: document.getElementById('f-status').value, harvest: document.getElementById('f-harvest').value.trim(), notes: document.getElementById('f-notes').value.trim(), photo: '' };
   if (isNew) plants.push(plant); else { const i = plants.findIndex(p => p.id === editId); if (i > -1) plants[i] = plant; }
   closePlantModal(); renderPlants(); showToast(isNew ? 'Plant added!' : 'Plant updated!');
   try { await savePlantSheet(plant, isNew); setSyncStatus('synced', 'Saved ✓'); }
@@ -2457,7 +2489,7 @@ async function confirmVoiceAction() {
   } else if (action === 'plant') {
     const name = document.getElementById('vc-name')?.value?.trim();
     if (!name) { showToast('Plant name is empty.'); return; }
-    const plant = { id: uid(), name, variety: document.getElementById('vc-variety')?.value||'', bed: document.getElementById('vc-bed')?.value||'', qty: document.getElementById('vc-qty2')?.value||'', date: document.getElementById('vc-date2')?.value||'', status: 'Seedling', harvest: '', notes: '', photo: '' };
+    const plant = { id: uid(), name, variety: document.getElementById('vc-variety')?.value||'', bed: normalizeBed(document.getElementById('vc-bed')?.value||''), qty: document.getElementById('vc-qty2')?.value||'', date: document.getElementById('vc-date2')?.value||'', status: 'Seedling', harvest: '', notes: '', photo: '' };
     plants.push(plant);
     renderPlants();
     showToast('🌱 Plant added!');
