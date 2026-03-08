@@ -1754,18 +1754,39 @@ async function handlePhotoSelected(event) {
     document.getElementById('photo-main-actions').style.display = 'flex';
     document.getElementById('photo-modal').classList.add('open');
 
-    // Run Gemini analysis and Drive upload in parallel
-    const [diagnosis] = await Promise.all([
-      analyzePhotoWithGemini(base64, currentPhotoMime, plant?.name || 'plant'),
-      uploadPhotoToDrive(file, plant)
-    ]);
-    currentDiagnosisText = diagnosis;
+    // Run Gemini analysis FIRST — only upload to Drive if it's actually a plant
+    const result = await analyzePhotoWithGemini(base64, currentPhotoMime, plant?.name || 'plant');
+
+    if (!result.isPlant) {
+      // Not a plant — show message, don't upload, don't save
+      document.getElementById('photo-diagnosis-area').innerHTML = `
+        <div class="diagnosis-box" style="border-color:#e0a000;background:#fffbee;">
+          <div class="diagnosis-title" style="color:#b35900;">📷 Hmm…</div>
+          <div>${result.message || "That doesn't look like a plant — try again!"}</div>
+        </div>`;
+      document.getElementById('btn-save-photo').style.display = 'none';
+      currentDiagnosisText = '';
+      return;
+    }
+
+    // It's a plant — now upload to Drive and save record
+    currentDiagnosisText = result.diagnosis;
+    const driveFileId = await uploadPhotoToDrive(file, plant);
+
+    // Save to Photos sheet
+    if (plant) {
+      const photo = { id: uid(), plantId: plant.id, plantName: plant.name,
+        date: new Date().toISOString().split('T')[0], fileId: driveFileId || '', diagnosis: currentDiagnosisText };
+      photos.push(photo);
+      renderPlants();
+      try { await savePhotoSheet(photo); } catch(e) { console.error('Photo save error:', e); }
+    }
 
     // Show diagnosis with "+ Create Task" option
     document.getElementById('photo-diagnosis-area').innerHTML = `
       <div class="diagnosis-box">
         <div class="diagnosis-title">🌿 Gemini Health Check</div>
-        <div id="diagnosis-text">${diagnosis}</div>
+        <div id="diagnosis-text">${currentDiagnosisText}</div>
       </div>
       <button class="photo-btn" onclick="showPhotoTaskForm()" style="margin-top:10px;">
         ＋ Create Task from this Diagnosis
@@ -1825,7 +1846,7 @@ async function analyzePhotoWithGemini(base64, mime, plantName) {
   const key = localStorage.getItem('hh_gemini_key');
   if (!key) return 'Add your Gemini API key in Settings to get health analysis.';
   try {
-    const prompt = `You are a helpful garden assistant. Look at this photo of a ${plantName} plant and provide a brief health assessment. In 2-4 sentences cover: what you observe about the plant's condition, any signs of disease, pests, nutrient deficiency, or stress you can see, and one practical suggestion if there's an issue. If the plant looks healthy, just say so briefly. Be friendly and practical.`;
+    const prompt = `You are a helpful garden assistant. First, check if this photo actually shows a plant or garden subject. If it does NOT (e.g. it's a foot, a wall, a random object, food, a person, etc.), respond with exactly this JSON: {"isPlant": false, "message": "That doesn't look like a plant — try pointing the camera at your ${plantName}!"}. If it IS a plant or garden-related, respond with exactly this JSON: {"isPlant": true, "diagnosis": "<your 2-4 sentence health assessment covering condition, any signs of disease/pests/deficiency, and one practical suggestion if needed. Be friendly and practical.>"}. Respond ONLY with the JSON object, no markdown.`;
     const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
@@ -1836,10 +1857,17 @@ async function analyzePhotoWithGemini(base64, mime, plantName) {
     });
     if (!res.ok) throw new Error('Gemini error');
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not analyze photo.';
+    const raw   = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    try {
+      return JSON.parse(clean);
+    } catch(e2) {
+      // Gemini returned plain text — treat as valid diagnosis
+      return { isPlant: true, diagnosis: raw || 'Could not analyze photo.' };
+    }
   } catch (e) {
     console.error('Photo analysis error:', e);
-    return 'Could not analyze photo — check your Gemini API key in Settings.';
+    return { isPlant: true, diagnosis: 'Could not analyze photo — check your Gemini API key in Settings.' };
   }
 }
 
@@ -1895,23 +1923,8 @@ async function uploadPhotoToDrive(file, plant) {
   }
 }
 
-// ── Save photo record to Photos sheet ──
-async function savePhotoToPlant() {
-  const plant = plants.find(p => p.id === currentPhotoPlantId);
-  if (!plant) { closePhotoModal(); return; }
-  const today = new Date().toISOString().split('T')[0];
-  const photo = {
-    id: uid(), plantId: plant.id, plantName: plant.name,
-    date: today, fileId: currentPhotoFileId || '',
-    diagnosis: currentDiagnosisText || ''
-  };
-  photos.push(photo);
-  renderPlants(); // refresh photo count badges
-  try {
-    await savePhotoSheet(photo);
-    setSyncStatus('synced', 'Photo saved ✓');
-    showToast('📷 Photo saved!');
-  } catch(e) { showToast('Photo saved locally — sync error.'); }
+// ── Save photo button — photo already saved after Gemini confirms it's a plant ──
+function savePhotoToPlant() {
   closePhotoModal();
 }
 
