@@ -2308,7 +2308,7 @@ First decide: is this a GARDEN QUESTION or a DATA ACTION?
 DATA ACTIONS — respond with ONLY a JSON object (no markdown):
 
 Log harvest: {"action":"harvest","plant":"<name>","qty":"<number>","unit":"<count|lbs|oz|kg|g|bunches>","date":"${today}","notes":""}
-Mark care done: {"action":"care_done","scheduleDesc":"<type> for <plant>"}
+Mark care done: {"action":"care_done","scheduleDesc":"<care type> for <plant name> — where care type must be one of: Watering, Fertilizing, Pruning, Pest Treatment — infer from what the user said (e.g. 'fertilized' = Fertilizing, 'sprayed' = Pest Treatment, 'watered' = Watering)"}
 Add task/reminder: {"action":"task","title":"<title>","due":"<YYYY-MM-DD or empty>","notes":""}
 Add plant: {"action":"plant","name":"<name>","variety":"<variety or empty>","bed":"<bed or empty>","qty":"<qty or empty>","date":"${today}"}
 
@@ -2410,22 +2410,28 @@ function showVoiceConfirm(parsed, transcript) {
       <div class="voice-field"><span class="voice-field-label">Date</span><input type="date" id="vc-date" value="${esc(parsed.date)}"></div>`;
   } else if (parsed.action === 'care_done') {
     labelText = '💧 Mark Care Done';
-    // Find matching care schedule
-    const match = careSchedules.find(c => (c.type + ' for ' + c.plant).toLowerCase() === (parsed.scheduleDesc||'').toLowerCase())
-                || careSchedules.find(c => parsed.scheduleDesc && parsed.scheduleDesc.toLowerCase().includes(c.plant.toLowerCase()));
-    const careOpts = careSchedules.map(c => {
-      const val  = c.id;
-      const text = c.type + ' — ' + c.plant;
-      const sel  = match && match.id === c.id ? 'selected' : '';
-      return `<option value="${esc(val)}" ${sel}>${esc(text)}</option>`;
-    }).join('');
-    if (!careOpts) {
+    if (!careSchedules.length) {
       label.textContent = 'No care schedules set up yet.';
       fields.innerHTML  = `<p style="font-size:0.85rem;color:var(--text-muted);">Add a care schedule in the Care tab first.</p>`;
       actions.style.display = 'none';
       confirm.style.display = 'block';
       return;
     }
+    const desc = (parsed.scheduleDesc||'').toLowerCase();
+    // Match by both plant name AND care type for best accuracy
+    const match = careSchedules.find(c =>
+        desc.includes(c.plant.toLowerCase()) && desc.includes(c.type.toLowerCase())
+      ) || careSchedules.find(c =>
+        desc.includes(c.plant.toLowerCase())
+      ) || careSchedules.find(c =>
+        (c.type + ' for ' + c.plant).toLowerCase() === desc
+      );
+    const careOpts = careSchedules.map(c => {
+      const val  = c.id;
+      const text = c.type + ' — ' + c.plant;
+      const sel  = match && match.id === c.id ? 'selected' : '';
+      return `<option value="${esc(val)}" ${sel}>${esc(text)}</option>`;
+    }).join('');
     fieldsHtml = `<div class="voice-field"><span class="voice-field-label">Schedule</span><select id="vc-care">${careOpts}</select></div>`;
   } else if (parsed.action === 'task') {
     labelText = '✅ Add Task';
