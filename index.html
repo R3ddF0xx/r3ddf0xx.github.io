@@ -2434,7 +2434,8 @@ function showVoiceConfirm(parsed, transcript) {
       const sel  = match && match.id === c.id ? 'selected' : '';
       return `<option value="${esc(val)}" ${sel}>${esc(text)}</option>`;
     }).join('');
-    fieldsHtml = `<div class="voice-field"><span class="voice-field-label">Schedule</span><select id="vc-care">${careOpts}</select></div>`;
+    console.log('careSchedules count:', careSchedules.length, careSchedules.map(c=>c.type+'—'+c.plant));
+    fieldsHtml = `<div class="voice-field"><span class="voice-field-label">Schedule (${careSchedules.length} loaded)</span><select id="vc-care">${careOpts}</select></div>`;
   } else if (parsed.action === 'task') {
     labelText = '✅ Add Task';
     fieldsHtml = `
