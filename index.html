@@ -2347,8 +2347,6 @@ Match plant names to closest existing plant when possible.`;
     console.log('Gemini raw response:', raw);
     const clean  = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
-    console.log('Parsed action:', JSON.stringify(parsed)); // debug
-    console.log('Care schedules:', careSchedules.map(c => c.type + ' for ' + c.plant)); // debug
     document.getElementById('voice-loading').style.display = 'none';
 
     if (parsed.action === 'question') {
@@ -2393,6 +2391,12 @@ function showVoiceAnswer(answer, transcript) {
 // ══════════════════════════════════════════
 //  VOICE — SHOW CONFIRM SCREEN
 // ══════════════════════════════════════════
+
+function toggleVcNewSchedule(val) {
+  const fields = document.getElementById('vc-new-schedule-fields');
+  if (fields) fields.style.display = val === '__new__' ? 'block' : 'none';
+}
+
 function showVoiceConfirm(parsed, transcript) {
   pendingVoiceAction = parsed;
   document.getElementById('voice-modal-title').textContent = 'Does this look right?';
@@ -2425,30 +2429,56 @@ function showVoiceConfirm(parsed, transcript) {
       <div class="voice-field"><span class="voice-field-label">Date</span><input type="date" id="vc-date" value="${esc(parsed.date)}"></div>`;
   } else if (parsed.action === 'care_done') {
     labelText = '💧 Mark Care Done';
-    if (!careSchedules.length) {
-      label.textContent = 'No care schedules set up yet.';
-      fields.innerHTML  = `<p style="font-size:0.85rem;color:var(--text-muted);">Add a care schedule in the Care tab first.</p>`;
-      actions.style.display = 'none';
-      confirm.style.display = 'block';
-      return;
-    }
     const desc = (parsed.scheduleDesc||'').toLowerCase();
-    // Match by both plant name AND care type for best accuracy
-    const match = careSchedules.find(c =>
-        desc.includes(c.plant.toLowerCase()) && desc.includes(c.type.toLowerCase())
-      ) || careSchedules.find(c =>
-        desc.includes(c.plant.toLowerCase())
-      ) || careSchedules.find(c =>
-        (c.type + ' for ' + c.plant).toLowerCase() === desc
-      );
-    const careOpts = careSchedules.map(c => {
-      const val  = c.id;
-      const text = c.type + ' — ' + c.plant;
-      const sel  = match && match.id === c.id ? 'selected' : '';
-      return `<option value="${esc(val)}" ${sel}>${esc(text)}</option>`;
+    // Only select a match if BOTH plant name AND care type are found in the description
+    const match = careSchedules.length ? careSchedules.find(c =>
+      desc.includes(c.plant.toLowerCase()) && desc.includes(c.type.toLowerCase())
+    ) : null;
+
+    // Parse suggested type + plant from Gemini's scheduleDesc (e.g. "Fertilizing for Jalapeno")
+    const careTypes = ['Watering','Fertilizing','Pruning','Pest Treatment'];
+    const suggestedType = careTypes.find(t => desc.includes(t.toLowerCase())) || 'Watering';
+    // Extract plant name: try known plants first, fallback to word after "for"
+    const suggestedPlant = plants.find(p => desc.includes(p.name.toLowerCase()))?.name
+      || (desc.match(/for (.+)$/i)?.[1]?.trim() || '');
+    const newLabel = suggestedPlant
+      ? `＋ Create new: ${suggestedType} — ${suggestedPlant}`
+      : `＋ Create new schedule`;
+
+    // Build dropdown: "create new" option first, then all existing schedules
+    const blankOpt = match ? '' : `<option value="">— Select schedule —</option>`;
+    const createOpt = `<option value="__new__">${esc(newLabel)}</option>`;
+    const existingOpts = careSchedules.map(c => {
+      const sel = match && match.id === c.id ? 'selected' : '';
+      return `<option value="${esc(c.id)}" ${sel}>${esc(c.type + ' — ' + c.plant)}</option>`;
     }).join('');
-    console.log('careSchedules count:', careSchedules.length, careSchedules.map(c=>c.type+'—'+c.plant));
-    fieldsHtml = `<div class="voice-field"><span class="voice-field-label">Schedule (${careSchedules.length} loaded)</span><select id="vc-care">${careOpts}</select></div>`;
+    const careOpts = blankOpt + createOpt + existingOpts;
+
+    fieldsHtml = `
+      <div class="voice-field">
+        <span class="voice-field-label">Schedule</span>
+        <select id="vc-care" onchange="toggleVcNewSchedule(this.value)">${careOpts}</select>
+      </div>
+      <div id="vc-new-schedule-fields" style="display:none;">
+        <div class="voice-field">
+          <span class="voice-field-label">Plant</span>
+          <input class="form-input" id="vc-new-plant" type="text" value="${esc(suggestedPlant)}" placeholder="Plant name">
+        </div>
+        <div class="voice-field">
+          <span class="voice-field-label">Care Type</span>
+          <select id="vc-new-type">
+            ${careTypes.map(t => `<option value="${t}" ${t===suggestedType?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="voice-field" style="display:flex;gap:8px;align-items:center;">
+          <span class="voice-field-label">Repeat every</span>
+          <input type="number" id="vc-new-freq" value="7" min="1" max="365" style="width:60px;padding:6px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+          <select id="vc-new-freq-unit" style="padding:6px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">
+            <option value="days">days</option>
+            <option value="weeks" selected>weeks</option>
+          </select>
+        </div>
+      </div>`;
   } else if (parsed.action === 'task') {
     labelText = '✅ Add Task';
     fieldsHtml = `
@@ -2492,7 +2522,38 @@ async function confirmVoiceAction() {
 
   } else if (action === 'care_done') {
     const careId = document.getElementById('vc-care')?.value;
-    if (careId) await markCareDone(careId);
+    if (careId === '__new__') {
+      // Create a brand new care schedule and immediately mark it done
+      const plant    = document.getElementById('vc-new-plant')?.value.trim();
+      const type     = document.getElementById('vc-new-type')?.value;
+      const freqVal  = parseInt(document.getElementById('vc-new-freq')?.value || '7');
+      const freqUnit = document.getElementById('vc-new-freq-unit')?.value;
+      if (!plant) { showToast('Please enter a plant name.'); return; }
+      const freqDays = freqUnit === 'weeks' ? freqVal * 7 : freqVal;
+      const today    = new Date().toISOString().split('T')[0];
+      const nextDue  = addDays(today, freqDays);
+      const care = {
+        id: uid(), plant: normalizeBed(plant) !== plant ? plant : plant,
+        type, freqDays, lastDone: today, nextDue, calEventId: '',
+        productName: '', productType: '', productAmount: '', productNotes: '', productPhotoId: ''
+      };
+      careSchedules.push(care);
+      renderCare();
+      showToast(`✅ Created & marked done! Next: ${new Date(nextDue+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}`);
+      // Create calendar event for next due
+      setSyncStatus('syncing', 'Saving…');
+      try {
+        const calId = await createCalEvent({ title: care.type + ' — ' + care.plant, due: care.nextDue, notes: 'Home Harvest care reminder' });
+        if (calId) { care.calEventId = calId; careSchedules[careSchedules.length-1] = care; }
+        await saveCareSheet(care, true);
+        setSyncStatus('synced', 'Saved ✓');
+      } catch(e) { showToast('Sync error — check Care tab.'); }
+    } else if (careId) {
+      await markCareDone(careId);
+    } else {
+      showToast('Please select a schedule.');
+      return;
+    }
 
   } else if (action === 'task') {
     const title = document.getElementById('vc-title')?.value?.trim();
