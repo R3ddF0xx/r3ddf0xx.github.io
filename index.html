@@ -827,7 +827,11 @@ async function sheetsReq(method, endpoint, body = null) {
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
   if (res.status === 401) { showToast('Session expired — please sign in again.'); signOut(); throw new Error('Unauthorized'); }
-  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'Sheets error'); }
+  if (!res.ok) {
+    let errMsg = 'Sheets error ' + res.status;
+    try { const e = await res.json(); errMsg = e.error?.message || errMsg; } catch(e2) {}
+    throw new Error(errMsg);
+  }
   return res.json();
 }
 
@@ -851,8 +855,19 @@ async function loadAllData() {
     await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare(), loadPhotos()]);
     setSyncStatus('synced', 'All data loaded ✓');
   } catch (e) {
-    setSyncStatus('error', 'Could not load — check your connection');
-    console.error(e);
+    console.error('loadAllData error:', e);
+    // Give a specific message based on what the error says
+    const msg = e.message || '';
+    if (msg.includes('403') || msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('access')) {
+      setSyncStatus('error', 'Access denied — make sure the spreadsheet is shared with this Google account');
+      showToast('⚠️ Spreadsheet not shared with this account — check Drive sharing settings', 6000);
+    } else if (msg.includes('404') || msg.toLowerCase().includes('not found')) {
+      setSyncStatus('error', 'Spreadsheet not found — check the Spreadsheet ID');
+    } else if (msg.includes('401') || msg.toLowerCase().includes('unauthorized')) {
+      setSyncStatus('error', 'Sign-in expired — please sign out and back in');
+    } else {
+      setSyncStatus('error', 'Could not load — ' + (msg || 'check your connection'));
+    }
   }
 }
 
