@@ -1755,13 +1755,15 @@ async function handlePhotoSelected(event) {
 
   const reader = new FileReader();
   reader.onload = async (e) => {
-    currentPhotoDataUrl = e.target.result;
-    const base64 = currentPhotoDataUrl.split(',')[1];
+    // Resize before anything else — prevents low memory on older phones
+    const resized = await resizeImageForGemini(e.target.result, 1024);
+    currentPhotoDataUrl = resized;
+    const base64 = resized.split(',')[1];
     const plant  = plants.find(p => p.id === currentPhotoPlantId);
 
     // Show modal with preview + analyzing state
     document.getElementById('photo-modal-title').textContent = plant ? plant.name : 'Plant Photo';
-    document.getElementById('photo-preview').src = currentPhotoDataUrl;
+    document.getElementById('photo-preview').src = resized;
     document.getElementById('photo-preview').style.display = 'block';
     document.getElementById('photo-diagnosis-area').innerHTML = '<div class="diagnosis-analyzing"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Analyzing plant health with Gemini…</div>';
     document.getElementById('btn-save-photo').style.display = 'none';
@@ -1857,6 +1859,27 @@ async function savePhotoTask() {
 }
 
 // ── Gemini vision analysis ──
+
+// ── Resize image before sending to Gemini — prevents low memory errors on phones ──
+function resizeImageForGemini(dataUrl, maxWidth = 1024) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale  = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      // Use JPEG at 0.82 quality — sharp enough to read text, much smaller file
+      const resized = canvas.toDataURL('image/jpeg', 0.82);
+      resolve(resized);
+    };
+    img.onerror = () => resolve(dataUrl); // fallback to original if resize fails
+    img.src = dataUrl;
+  });
+}
+
 async function analyzePhotoWithGemini(base64, mime, plantName) {
   const key = localStorage.getItem('hh_gemini_key');
   if (!key) return 'Add your Gemini API key in Settings to get health analysis.';
@@ -1870,14 +1893,20 @@ async function analyzePhotoWithGemini(base64, mime, plantName) {
         { inline_data: { mime_type: mime, data: base64 } }
       ]}]})
     });
-    if (!res.ok) throw new Error('Gemini error');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      const errMsg  = errData.error?.message || '';
+      if (errMsg.toLowerCase().includes('memory') || errMsg.toLowerCase().includes('too large') || res.status === 413) {
+        return { isPlant: true, diagnosis: 'Photo was too large to process — try moving closer and retaking in better light.' };
+      }
+      throw new Error('Gemini API error ' + res.status + ': ' + errMsg);
+    }
     const data = await res.json();
     const raw   = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const clean = raw.replace(/```json|```/g, '').trim();
     try {
       return JSON.parse(clean);
     } catch(e2) {
-      // Gemini returned plain text — treat as valid diagnosis
       return { isPlant: true, diagnosis: raw || 'Could not analyze photo.' };
     }
   } catch (e) {
@@ -2029,7 +2058,8 @@ async function handleProductPhotoSelected(event) {
 
   const reader = new FileReader();
   reader.onload = async (e) => {
-    const dataUrl = e.target.result;
+    // Resize before sending — seed packets and labels are often high-res
+    const dataUrl = await resizeImageForGemini(e.target.result, 1024);
     const base64  = dataUrl.split(',')[1];
 
     // Show thumbnail immediately
