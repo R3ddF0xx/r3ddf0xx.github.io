@@ -436,8 +436,40 @@
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Expected Harvest Window</label><input class="form-input" id="f-harvest" type="text" placeholder="e.g. Late July – August"></div>
-    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="f-notes" placeholder="Any extra details…"></textarea></div>
+    <!-- HARVEST WINDOW SECTION -->
+    <div class="product-section">
+      <div class="product-section-title">🍅 Harvest Window</div>
+      <div class="form-group"><label class="form-label">Expected Harvest Window</label><input class="form-input" id="f-harvest" type="text" placeholder="e.g. Late July – August"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Harvest Start</label><input class="form-input" id="f-harvest-start" type="date"></div>
+        <div class="form-group"><label class="form-label">Harvest End</label><input class="form-input" id="f-harvest-end" type="date"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="product-photo-btn" style="flex:1;min-width:120px;" onclick="getRecommendedHarvest()">🌱 Recommended</button>
+        <button class="product-photo-btn" style="flex:1;min-width:120px;" onclick="openSeedPacketPhoto()">📷 Seed Packet</button>
+      </div>
+      <div id="harvest-gemini-status" style="display:none;" class="product-analyzing"><div class="spinner" style="width:16px;height:16px;border-width:2px;"></div> <span id="harvest-gemini-msg">Looking up harvest dates…</span></div>
+      <div class="form-group" style="margin-top:8px;">
+        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+          Add to Google Calendar
+          <select class="form-select" id="f-harvest-cal" style="width:auto;font-size:0.8rem;padding:4px 8px;">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <input type="file" id="seed-packet-input" accept="image/*" capture="environment" style="display:none" onchange="handleSeedPacketPhoto(event)">
+    <!-- NOTES WITH PTT -->
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+        Notes
+        <button class="product-photo-btn" style="padding:4px 10px;font-size:0.8rem;margin:0;" id="notes-ptt-btn"
+          onpointerdown="startNotesPTT()" onpointerup="stopNotesPTT()" onpointercancel="stopNotesPTT()" onpointerleave="stopNotesPTT()">🎤 Hold to speak</button>
+      </label>
+      <textarea class="form-textarea" id="f-notes" placeholder="Any extra details…"></textarea>
+      <div id="notes-ptt-status" style="display:none;font-size:0.78rem;color:var(--text-muted);margin-top:4px;font-style:italic;">🎤 Listening…</div>
+    </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closePlantModal()">Cancel</button>
       <button class="btn-primary" onclick="savePlant()">Save Plant</button>
@@ -932,10 +964,11 @@ async function loadAllData() {
 
 // ── PLANTS ──
 async function loadPlants() {
-  const d = await sheetsReq('GET', '/values/Plants!A2:I');
+  const d = await sheetsReq('GET', '/values/Plants!A2:L');
   plants = (d.values || []).map(r => ({
     id: r[0]||'', name: r[1]||'', variety: r[2]||'', bed: r[3]||'',
-    date: r[4]||'', status: r[5]||'', harvest: r[6]||'', notes: r[7]||'', photo: r[8]||''
+    date: r[4]||'', status: r[5]||'', harvest: r[6]||'', notes: r[7]||'', photo: r[8]||'',
+    harvestCalEventId: r[9]||'', harvestStart: r[10]||'', harvestEnd: r[11]||''
   })).filter(p => p.id && p.name);
   renderPlants();
 }
@@ -967,12 +1000,12 @@ function normalizeBed(bed) {
 }
 
 async function savePlantSheet(plant, isNew) {
-  const row = [plant.id, plant.name, plant.variety, plant.bed, plant.date, plant.status, plant.harvest, plant.notes, plant.photo];
+  const row = [plant.id, plant.name, plant.variety, plant.bed, plant.date, plant.status, plant.harvest, plant.notes, plant.photo, plant.harvestCalEventId||'', plant.harvestStart||'', plant.harvestEnd||''];
   if (isNew) {
-    await sheetsReq('POST', '/values/Plants!A:I:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+    await sheetsReq('POST', '/values/Plants!A:L:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
   } else {
     const n = plants.findIndex(p => p.id === plant.id) + 2;
-    await sheetsReq('PUT', `/values/Plants!A${n}:I${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+    await sheetsReq('PUT', `/values/Plants!A${n}:L${n}?valueInputOption=USER_ENTERED`, { values: [row] });
   }
 }
 
@@ -1114,7 +1147,7 @@ function plantCard(p) {
   const viewPhotosBtn = plantPhotoCount > 0
     ? `<button class="btn-icon" onclick="event.stopPropagation();openPhotoHistory('${p.id}')" title="View ${plantPhotoCount} photo${plantPhotoCount>1?'s':''}">🖼️</button>`
     : '';
-  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions">${viewPhotosBtn}<button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openCompanions('${esc(p.name)}','${esc(p.variety||'')}')" title="Companion plants">🌿</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}${productHistoryHtml}</div>`;
+  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions">${viewPhotosBtn}<button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openCompanions('${esc(p.name)}','${esc(p.variety||'')}')" title="Companion plants">🌿</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvestStart?`<span class="tag tag-harvest">🍅 Harvest ${formatDate(p.harvestStart)}${p.harvestEnd?' – '+formatDate(p.harvestEnd):''}</span>`:p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}${productHistoryHtml}</div>`;
 }
 
 // ══════════════════════════════════════════
@@ -1198,15 +1231,18 @@ function openPlantModal(id = null) {
     document.getElementById('f-variety').value = p.variety;
     document.getElementById('f-bed').value     = p.bed;
     document.getElementById('f-qty').value     = p.qty || '';
-    document.getElementById('f-date').value    = p.date;
-    document.getElementById('f-status').value  = p.status;
-    document.getElementById('f-harvest').value = p.harvest;
-    document.getElementById('f-notes').value   = p.notes;
+    document.getElementById('f-date').value          = p.date;
+    document.getElementById('f-status').value         = p.status;
+    document.getElementById('f-harvest').value        = p.harvest;
+    document.getElementById('f-harvest-start').value  = p.harvestStart || '';
+    document.getElementById('f-harvest-end').value    = p.harvestEnd || '';
+    document.getElementById('f-notes').value          = p.notes;
+    document.getElementById('f-harvest-cal').value    = 'no'; // don't re-add cal on edit unless changed
     del.style.display = 'block'; del.setAttribute('data-id', id);
   } else {
     document.getElementById('plant-modal-title').textContent = 'Add Plant';
     document.getElementById('plant-edit-id').value = '';
-    ['f-name','f-variety','f-bed','f-qty','f-date','f-harvest','f-notes'].forEach(x => document.getElementById(x).value = '');
+    ['f-name','f-variety','f-bed','f-qty','f-date','f-harvest','f-harvest-start','f-harvest-end','f-notes'].forEach(x => document.getElementById(x).value = '');
     document.getElementById('f-status').value = '';
     del.style.display = 'none';
   }
@@ -1221,9 +1257,31 @@ async function savePlant() {
   if (!name) { showToast('Please enter a plant name.'); return; }
   const editId = document.getElementById('plant-edit-id').value;
   const isNew  = !editId;
-  const plant  = { id: isNew ? uid() : editId, name, variety: document.getElementById('f-variety').value.trim(), bed: normalizeBed(document.getElementById('f-bed').value), qty: document.getElementById('f-qty').value.trim(), date: document.getElementById('f-date').value, status: document.getElementById('f-status').value, harvest: document.getElementById('f-harvest').value.trim(), notes: document.getElementById('f-notes').value.trim(), photo: '' };
+  const existing = isNew ? null : plants.find(p => p.id === editId);
+  const harvestStart = document.getElementById('f-harvest-start').value;
+  const harvestEnd   = document.getElementById('f-harvest-end').value;
+  const addToCal     = document.getElementById('f-harvest-cal').value === 'yes';
+  const plant = {
+    id: isNew ? uid() : editId, name,
+    variety:  document.getElementById('f-variety').value.trim(),
+    bed:      normalizeBed(document.getElementById('f-bed').value),
+    qty:      document.getElementById('f-qty').value.trim(),
+    date:     document.getElementById('f-date').value,
+    status:   document.getElementById('f-status').value,
+    harvest:  document.getElementById('f-harvest').value.trim(),
+    notes:    document.getElementById('f-notes').value.trim(),
+    photo:    existing ? existing.photo : '',
+    harvestStart, harvestEnd,
+    harvestCalEventId: existing ? existing.harvestCalEventId : ''
+  };
   if (isNew) plants.push(plant); else { const i = plants.findIndex(p => p.id === editId); if (i > -1) plants[i] = plant; }
   closePlantModal(); renderPlants(); showToast(isNew ? 'Plant added!' : 'Plant updated!');
+
+  // Handle harvest calendar event
+  if (addToCal && harvestStart) {
+    await handleHarvestCalEvent(plant);
+  }
+
   try { await savePlantSheet(plant, isNew); setSyncStatus('synced', 'Saved ✓'); }
   catch (e) { showToast('Sync error — reloading…'); loadPlants(); }
 }
@@ -2311,6 +2369,191 @@ function productBadge(record) {
   return `<span class="product-badge">🧴 ${esc(record.productName)}</span>`;
 }
 
+
+
+// ══════════════════════════════════════════
+//  PLANT MODAL — NOTES PTT
+// ══════════════════════════════════════════
+let notesPTTRecognition = null;
+let notesPTTActive = false;
+
+function startNotesPTT() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('Speech recognition not supported on this browser.'); return; }
+  notesPTTActive = true;
+  document.getElementById('notes-ptt-btn').style.background = '#ffebee';
+  document.getElementById('notes-ptt-status').style.display = 'block';
+  notesPTTRecognition = new SpeechRecognition();
+  notesPTTRecognition.continuous = true;
+  notesPTTRecognition.interimResults = false;
+  notesPTTRecognition.lang = 'en-US';
+  notesPTTRecognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
+    const notesEl = document.getElementById('f-notes');
+    notesEl.value = (notesEl.value ? notesEl.value + ' ' : '') + transcript;
+  };
+  notesPTTRecognition.onerror = (e) => { if (e.error !== 'no-speech') stopNotesPTT(); };
+  notesPTTRecognition.start();
+}
+
+function stopNotesPTT() {
+  notesPTTActive = false;
+  document.getElementById('notes-ptt-btn').style.background = '';
+  document.getElementById('notes-ptt-status').style.display = 'none';
+  if (notesPTTRecognition) { try { notesPTTRecognition.stop(); } catch(e){} notesPTTRecognition = null; }
+}
+
+// ══════════════════════════════════════════
+//  HARVEST DATES — RECOMMENDED & SEED PACKET
+// ══════════════════════════════════════════
+async function getRecommendedHarvest() {
+  const name    = document.getElementById('f-name').value.trim();
+  const variety = document.getElementById('f-variety').value.trim();
+  const planted = document.getElementById('f-date').value;
+  if (!name) { showToast('Enter a plant name first.'); return; }
+  if (!planted) { showToast('Enter a planting date first.'); return; }
+
+  const key = localStorage.getItem('hh_gemini_key');
+  if (!key) { showToast('Add your Gemini API key in Settings.'); return; }
+
+  setHarvestStatus(true, 'Looking up days to maturity…');
+  const fullName = variety ? `${name} (${variety})` : name;
+
+  try {
+    const prompt = `How many days does ${fullName} typically take from transplant/direct sow to harvest? Give a realistic range for a home garden in Tulsa, Oklahoma Zone 7a. Respond ONLY with JSON: {"daysMin": 60, "daysMax": 80, "note": "one sentence about harvest signs to look for"}`;
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    if (!res.ok) throw new Error('API error');
+    const data  = await res.json();
+    const raw   = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    applyHarvestDates(planted, result.daysMin, result.daysMax, result.note);
+  } catch(e) {
+    console.error('Harvest lookup error:', e);
+    setHarvestStatus(false);
+    showToast('Could not look up harvest dates — check your Gemini API key.');
+  }
+}
+
+function applyHarvestDates(planted, daysMin, daysMax, note) {
+  const plantedDate = new Date(planted + 'T00:00:00');
+  const startDate   = new Date(plantedDate); startDate.setDate(startDate.getDate() + (daysMin || 0));
+  const endDate     = new Date(plantedDate); endDate.setDate(endDate.getDate() + (daysMax || daysMin || 0));
+  document.getElementById('f-harvest-start').value = startDate.toISOString().split('T')[0];
+  document.getElementById('f-harvest-end').value   = endDate.toISOString().split('T')[0];
+  // Also fill the text harvest window field
+  const startLabel = startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  const endLabel   = endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  document.getElementById('f-harvest').value = `${startLabel} – ${endLabel}`;
+  document.getElementById('f-harvest-cal').value = 'yes';
+  setHarvestStatus(false);
+  if (note) showToast('💡 ' + note, 4000);
+}
+
+function setHarvestStatus(show, msg = '') {
+  const el = document.getElementById('harvest-gemini-status');
+  el.style.display = show ? 'flex' : 'none';
+  if (msg) document.getElementById('harvest-gemini-msg').textContent = msg;
+}
+
+// ── Seed packet photo ──
+function openSeedPacketPhoto() {
+  const input = document.getElementById('seed-packet-input');
+  input.value = '';
+  input.click();
+}
+
+async function handleSeedPacketPhoto(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const key = localStorage.getItem('hh_gemini_key');
+  if (!key) { showToast('Add your Gemini API key in Settings.'); return; }
+
+  setHarvestStatus(true, 'Reading seed packet…');
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const resized = await resizeImageForGemini(e.target.result, 1024);
+    const base64  = resized.split(',')[1];
+    try {
+      const prompt = `Look at this seed packet image. Extract the days to maturity or harvest information. Respond ONLY with JSON: {"daysMin": 65, "daysMax": 75, "harvestNote": "brief description of harvest window from the packet"}. If only one number is shown use it for both min and max. If you can't read harvest info clearly, use null for both.`;
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: file.type, data: base64 } }] }] })
+      });
+      if (!res.ok) throw new Error('API error');
+      const data  = await res.json();
+      const raw   = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const result = JSON.parse(clean);
+      const planted = document.getElementById('f-date').value;
+      if (!result.daysMin && !result.daysMax) {
+        setHarvestStatus(false);
+        showToast("Couldn't read harvest days from that packet — try a clearer photo.");
+        return;
+      }
+      if (!planted) {
+        // Just fill in the text field if no plant date
+        document.getElementById('f-harvest').value = result.harvestNote || `${result.daysMin}–${result.daysMax} days`;
+        setHarvestStatus(false);
+        showToast('📦 Read from packet! Add a planting date to calculate exact dates.');
+        return;
+      }
+      applyHarvestDates(planted, result.daysMin, result.daysMax, result.harvestNote);
+      showToast('📦 Harvest dates calculated from seed packet!');
+    } catch(e) {
+      console.error('Seed packet error:', e);
+      setHarvestStatus(false);
+      showToast('Could not read seed packet — try again with better lighting.');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Harvest calendar event handling ──
+async function handleHarvestCalEvent(plant) {
+  if (!plant.harvestStart) return;
+  const eventTitle = `🍅 ${plant.name}${plant.variety ? ' (' + plant.variety + ')' : ''} ready to harvest`;
+  const endDate    = plant.harvestEnd || plant.harvestStart;
+
+  // Check if there's an existing event
+  if (plant.harvestCalEventId) {
+    const useExisting = confirm(`This plant already has a harvest event on Google Calendar.\n\nTap OK to keep the existing event, or Cancel to replace it with the new dates.`);
+    if (useExisting) return;
+    // Delete old event
+    try { await deleteCalEvent(plant.harvestCalEventId); } catch(e) { console.error('Delete old harvest cal event error:', e); }
+    plant.harvestCalEventId = '';
+  }
+
+  setSyncStatus('syncing', 'Adding harvest to calendar…');
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        summary: eventTitle,
+        description: `Home Harvest — ${plant.name}${plant.variety?' ('+plant.variety+')':''} harvest window`,
+        start: { date: plant.harvestStart },
+        end:   { date: endDate },
+        reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 480 }] }
+      })
+    });
+    if (res.ok) {
+      const cal = await res.json();
+      plant.harvestCalEventId = cal.id;
+      // Update the plant record in our array
+      const i = plants.findIndex(p => p.id === plant.id);
+      if (i > -1) plants[i] = plant;
+      await savePlantSheet(plant, false);
+      showToast('📅 Harvest window added to Google Calendar!');
+    }
+  } catch(e) { console.error('Harvest cal event error:', e); }
+}
 
 // ══════════════════════════════════════════
 //  COMPANION PLANTS — Gemini powered
