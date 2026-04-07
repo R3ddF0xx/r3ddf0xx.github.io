@@ -299,6 +299,22 @@
   .product-history-name { color: var(--text); }
   .product-history-detail { color: var(--text-muted); font-size: 0.78rem; }
 
+
+  /* COMPANIONS & CARE TIPS */
+  .companions-section { margin-bottom:16px; }
+  .companions-section-title { font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px; }
+  .companions-section-title.good { color:#2e7d32; }
+  .companions-section-title.avoid { color:#c62828; }
+  .companions-list { display:flex;flex-wrap:wrap;gap:6px; }
+  .companion-chip { padding:4px 10px;border-radius:20px;font-size:0.82rem;font-weight:500; }
+  .companion-chip.good { background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7; }
+  .companion-chip.avoid { background:#ffebee;color:#c62828;border:1px solid #ef9a9a; }
+  .companions-note { font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-top:10px;font-style:italic; }
+  .tips-loading { display:flex;align-items:center;gap:10px;color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:16px 0; }
+  .tips-body { font-size:0.88rem;line-height:1.7;color:var(--text); }
+  .tips-body p { margin-bottom:10px; }
+  .tips-body strong { color:var(--green-dark); }
+
 </style>
 </head>
 <body>
@@ -602,6 +618,31 @@
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn-secondary" onclick="closePhotoHistoryModal()">Close</button>
       <button class="btn-primary" onclick="addAnotherPhoto()">📷 Add Photo</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- COMPANIONS MODAL -->
+<div class="modal-overlay" id="companions-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" id="companions-title">🌿 Companion Plants</h2>
+    <div id="companions-body" style="max-height:65vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-secondary" onclick="document.getElementById('companions-modal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CARE TIPS MODAL -->
+<div class="modal-overlay" id="care-tips-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" id="care-tips-title">💡 Care Tips</h2>
+    <div id="care-tips-body" style="max-height:65vh;overflow-y:auto;padding-bottom:8px;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-secondary" onclick="document.getElementById('care-tips-modal').classList.remove('open')">Close</button>
     </div>
   </div>
 </div>
@@ -1051,7 +1092,11 @@ function plantCard(p) {
       ${pr.productAmount?`<div class="product-history-detail">${esc(pr.productAmount)}</div>`:''}
     </div>`).join('')}
   </div>` : '';
-  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions"><button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''} ${photoCount(p.id)}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}${productHistoryHtml}</div>`;
+  const plantPhotoCount = photos.filter(ph => ph.plantId === p.id).length;
+  const viewPhotosBtn = plantPhotoCount > 0
+    ? `<button class="btn-icon" onclick="event.stopPropagation();openPhotoHistory('${p.id}')" title="View ${plantPhotoCount} photo${plantPhotoCount>1?'s':''}">🖼️</button>`
+    : '';
+  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions">${viewPhotosBtn}<button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openCompanions('${esc(p.name)}','${esc(p.variety||'')}')" title="Companion plants">🌿</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}${productHistoryHtml}</div>`;
 }
 
 // ══════════════════════════════════════════
@@ -1524,8 +1569,9 @@ function renderCare() {
         </div>
       </div>
       <div class="card-tags">${dueTag}${lastTag}${calTag}${productBadge(c)}</div>
-      <div style="margin-top:10px;">
+      <div style="margin-top:10px;display:flex;gap:8px;">
         <button class="btn-done" onclick="markCareDone('${c.id}')">✓ Mark Done</button>
+        <button class="btn-secondary" style="font-size:0.8rem;padding:6px 12px;" onclick="openCareTips('${esc(c.plant)}','${esc(c.type)}')">💡 Tips</button>
       </div>
     </div>`;
   }).join('');
@@ -2219,6 +2265,109 @@ function productBadge(record) {
   if (!record.productName) return '';
   return `<span class="product-badge">🧴 ${esc(record.productName)}</span>`;
 }
+
+
+// ══════════════════════════════════════════
+//  COMPANION PLANTS — Gemini powered
+// ══════════════════════════════════════════
+async function openCompanions(plantName, variety) {
+  const fullName = variety ? `${plantName} (${variety})` : plantName;
+  document.getElementById('companions-title').textContent = `🌿 Companions for ${plantName}`;
+  document.getElementById('companions-body').innerHTML = `<div class="tips-loading"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Finding companion plants…</div>`;
+  document.getElementById('companions-modal').classList.add('open');
+
+  const key = localStorage.getItem('hh_gemini_key');
+  if (!key) {
+    document.getElementById('companions-body').innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Add your Gemini API key in Settings to get companion planting advice.</p>`;
+    return;
+  }
+
+  try {
+    const prompt = `I'm growing ${fullName} in a home garden in Tulsa, Oklahoma (Zone 7a). Give me companion planting advice. Respond ONLY with a JSON object like this:
+{
+  "good": ["plant1", "plant2", "plant3", "plant4"],
+  "avoid": ["plant1", "plant2"],
+  "tip": "One practical sentence about the most important companion planting tip for this plant in a home garden."
+}
+Keep lists to 4-6 items max. Common vegetables/herbs only — things a home gardener would actually plant.`;
+
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    if (!res.ok) throw new Error('API error');
+    const data  = await res.json();
+    const raw   = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    const goodChips  = (result.good  || []).map(p => `<span class="companion-chip good">✓ ${esc(p)}</span>`).join('');
+    const avoidChips = (result.avoid || []).map(p => `<span class="companion-chip avoid">✗ ${esc(p)}</span>`).join('');
+
+    document.getElementById('companions-body').innerHTML = `
+      ${goodChips ? `<div class="companions-section">
+        <div class="companions-section-title good">👍 Plant Near</div>
+        <div class="companions-list">${goodChips}</div>
+      </div>` : ''}
+      ${avoidChips ? `<div class="companions-section">
+        <div class="companions-section-title avoid">👎 Keep Away</div>
+        <div class="companions-list">${avoidChips}</div>
+      </div>` : ''}
+      ${result.tip ? `<div class="companions-note">💡 ${esc(result.tip)}</div>` : ''}
+    `;
+  } catch(e) {
+    console.error('Companions error:', e);
+    document.getElementById('companions-body').innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Could not load companion plants — check your Gemini API key.</p>`;
+  }
+}
+document.getElementById('companions-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('companions-modal')) document.getElementById('companions-modal').classList.remove('open');
+});
+
+// ══════════════════════════════════════════
+//  CARE TIPS — Gemini powered
+// ══════════════════════════════════════════
+async function openCareTips(plant, careType) {
+  document.getElementById('care-tips-title').textContent = `💡 ${careType} Tips — ${plant}`;
+  document.getElementById('care-tips-body').innerHTML = `<div class="tips-loading"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Getting tips from Gemini…</div>`;
+  document.getElementById('care-tips-modal').classList.add('open');
+
+  const key = localStorage.getItem('hh_gemini_key');
+  if (!key) {
+    document.getElementById('care-tips-body').innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Add your Gemini API key in Settings to get care tips.</p>`;
+    return;
+  }
+
+  const today    = new Date();
+  const month    = today.toLocaleString('en-US', { month: 'long' });
+  const season   = ['December','January','February'].includes(month) ? 'winter'
+                 : ['March','April','May'].includes(month) ? 'spring'
+                 : ['June','July','August'].includes(month) ? 'summer' : 'fall';
+
+  try {
+    const prompt = `Give me practical ${careType.toLowerCase()} tips for ${plant} in a home garden in Tulsa, Oklahoma (Zone 7a) in ${season} (currently ${month}). 3-4 short practical tips a home gardener can actually use right now. Format as plain sentences, no bullet symbols. Keep it friendly and specific to this plant and season.`;
+
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No tips available.';
+
+    // Convert line breaks to paragraphs
+    const formatted = text.split(/\n+/).filter(l => l.trim()).map(l => `<p>${esc(l.trim())}</p>`).join('');
+    document.getElementById('care-tips-body').innerHTML = `<div class="tips-body">${formatted}</div>`;
+  } catch(e) {
+    console.error('Care tips error:', e);
+    document.getElementById('care-tips-body').innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Could not load tips — check your Gemini API key.</p>`;
+  }
+}
+document.getElementById('care-tips-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('care-tips-modal')) document.getElementById('care-tips-modal').classList.remove('open');
+});
 
 // ══════════════════════════════════════════
 //  SETTINGS — GEMINI API KEY
