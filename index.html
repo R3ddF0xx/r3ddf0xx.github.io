@@ -623,6 +623,24 @@
 </div>
 
 
+
+<!-- PHOTO MODE PICKER -->
+<div class="modal-overlay" id="photo-mode-modal">
+  <div class="modal" style="padding-bottom:24px;">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" style="margin-bottom:6px;">📷 Add Photo</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px;">What would you like to do?</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn-primary" style="padding:14px;font-size:0.95rem;" onclick="startPhotoCapture(false)">
+        📸 Just take a photo
+      </button>
+      <button class="btn-secondary" style="padding:14px;font-size:0.95rem;" onclick="startPhotoCapture(true)">
+        🔍 Take photo &amp; diagnose health
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- COMPANIONS MODAL -->
 <div class="modal-overlay" id="companions-modal">
   <div class="modal">
@@ -1784,14 +1802,25 @@ function photoCount(plantId) {
 
 // ── Open camera/gallery ──
 function openPhotoCapture(plantId) {
-  currentPhotoPlantId = plantId;
-  currentPhotoFileId  = null;
+  currentPhotoPlantId  = plantId;
+  currentPhotoFileId   = null;
   currentDiagnosisText = null;
   currentPhotoDataUrl  = null;
+  document.getElementById('photo-mode-modal').classList.add('open');
+}
+
+let photoDiagnoseMode = false;
+
+function startPhotoCapture(diagnose) {
+  photoDiagnoseMode = diagnose;
+  document.getElementById('photo-mode-modal').classList.remove('open');
   const input = document.getElementById('photo-input');
   input.value = '';
   input.click();
 }
+document.getElementById('photo-mode-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('photo-mode-modal')) document.getElementById('photo-mode-modal').classList.remove('open');
+});
 
 // ── Handle selected photo ──
 async function handlePhotoSelected(event) {
@@ -1807,17 +1836,35 @@ async function handlePhotoSelected(event) {
     const base64 = resized.split(',')[1];
     const plant  = plants.find(p => p.id === currentPhotoPlantId);
 
-    // Show modal with preview + analyzing state
+    // Show modal with preview
     document.getElementById('photo-modal-title').textContent = plant ? plant.name : 'Plant Photo';
     document.getElementById('photo-preview').src = resized;
     document.getElementById('photo-preview').style.display = 'block';
-    document.getElementById('photo-diagnosis-area').innerHTML = '<div class="diagnosis-analyzing"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Analyzing plant health with Gemini…</div>';
-    document.getElementById('btn-save-photo').style.display = 'none';
     document.getElementById('photo-task-form').style.display = 'none';
     document.getElementById('photo-main-actions').style.display = 'flex';
     document.getElementById('photo-modal').classList.add('open');
 
-    // Run Gemini analysis FIRST — only upload to Drive if it's actually a plant
+    if (!photoDiagnoseMode) {
+      // Just a photo — upload and save immediately, no Gemini
+      document.getElementById('photo-diagnosis-area').innerHTML = '';
+      document.getElementById('btn-save-photo').style.display = 'none';
+      const driveFileId = await uploadPhotoToDrive(file, plant);
+      if (plant) {
+        const photo = { id: uid(), plantId: plant.id, plantName: plant.name,
+          date: new Date().toISOString().split('T')[0], fileId: driveFileId || '', diagnosis: '' };
+        photos.push(photo);
+        renderPlants();
+        try { await savePhotoSheet(photo); } catch(e) { console.error('Photo save error:', e); }
+      }
+      showToast('📷 Photo saved!');
+      closePhotoModal();
+      return;
+    }
+
+    // Diagnose mode — run Gemini first
+    document.getElementById('photo-diagnosis-area').innerHTML = '<div class="diagnosis-analyzing"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Analyzing plant health with Gemini…</div>';
+    document.getElementById('btn-save-photo').style.display = 'none';
+
     const result = await analyzePhotoWithGemini(base64, currentPhotoMime, plant?.name || 'plant');
 
     if (!result.isPlant) {
@@ -1832,11 +1879,9 @@ async function handlePhotoSelected(event) {
       return;
     }
 
-    // It's a plant — now upload to Drive and save record
+    // It's a plant — upload and save with diagnosis
     currentDiagnosisText = result.diagnosis;
     const driveFileId = await uploadPhotoToDrive(file, plant);
-
-    // Save to Photos sheet
     if (plant) {
       const photo = { id: uid(), plantId: plant.id, plantName: plant.name,
         date: new Date().toISOString().split('T')[0], fileId: driveFileId || '', diagnosis: currentDiagnosisText };
