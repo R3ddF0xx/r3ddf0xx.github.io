@@ -315,6 +315,47 @@
   .tips-body p { margin-bottom:10px; }
   .tips-body strong { color:var(--green-dark); }
 
+
+  /* BED MAP */
+  .bed-map-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity 0.2s; }
+  .bed-map-overlay.open { opacity:1;pointer-events:all; }
+  .bed-map-panel { background:var(--warm-white);border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden; }
+  .bed-map-header { padding:16px 20px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+  .bed-map-title { font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--green-dark); }
+  .bed-map-toolbar { display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap; }
+  .bed-map-scroll { flex:1;overflow:auto;padding:16px; }
+  .bed-grid { display:inline-grid;gap:2px;cursor:pointer;user-select:none; }
+  .bed-cell { border-radius:4px;border:1.5px solid rgba(0,0,0,0.12);display:flex;align-items:center;justify-content:center;font-size:0.6rem;text-align:center;line-height:1.2;transition:transform 0.1s;overflow:hidden;padding:2px; }
+  .bed-cell:active { transform:scale(0.95); }
+  .bed-cell.empty { background:#f0ede6;border-style:dashed;color:var(--text-muted); }
+  .bed-cell.filled { color:white;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,0.3); }
+  .bed-cell.painting { outline:2px solid var(--amber);outline-offset:-2px; }
+  .bed-cell.status-seedling { background:#81c784; }
+  .bed-cell.status-growing { background:#388e3c; }
+  .bed-cell.status-flowering { background:#f06292; }
+  .bed-cell.status-ready { background:#f57c00; }
+  .bed-cell.status-done { background:#90a4ae; }
+  .bed-cell.status-unknown { background:#a5d6a7; }
+  .bed-legend { display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 12px;flex-shrink:0;border-top:1px solid var(--border); }
+  .bed-legend-item { display:flex;align-items:center;gap:4px;font-size:0.72rem;color:var(--text-muted); }
+  .bed-legend-dot { width:10px;height:10px;border-radius:3px;flex-shrink:0; }
+  .zoom-btn { width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--warm-white);font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit; }
+  .bed-setup { padding:20px;text-align:center; }
+  .bed-setup p { font-size:0.9rem;color:var(--text-muted);margin-bottom:16px; }
+  .bed-size-row { display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;font-size:0.9rem; }
+  .bed-size-input { width:60px;padding:8px;border:1.5px solid var(--border);border-radius:8px;text-align:center;font-family:inherit;font-size:1rem; }
+  .paint-plant-picker { position:fixed;bottom:0;left:0;right:0;background:var(--warm-white);border-radius:16px 16px 0 0;padding:16px;z-index:210;transform:translateY(100%);transition:transform 0.25s;max-height:60vh;overflow-y:auto; }
+  .paint-plant-picker.open { transform:translateY(0); }
+  .paint-option { padding:10px 14px;border-radius:10px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:0.9rem; }
+  .paint-option:active { background:#e8f5e9; }
+  .paint-option.selected { background:#e8f5e9;font-weight:600; }
+  .paint-color-dot { width:14px;height:14px;border-radius:4px;flex-shrink:0; }
+
+
+  .filter-chip-wrap { display:inline-flex;align-items:center;gap:2px;margin-right:4px; }
+  .bed-map-btn { background:none;border:none;font-size:0.95rem;cursor:pointer;padding:2px 4px;border-radius:6px;line-height:1; }
+  .bed-map-btn:active { background:#e8f5e9; }
+
 </style>
 </head>
 <body>
@@ -656,6 +697,62 @@
 
 
 
+<!-- BED MAP OVERLAY -->
+<div class="bed-map-overlay" id="bed-map-overlay">
+  <div class="bed-map-panel">
+    <div class="modal-handle" style="margin:10px auto 0;"></div>
+    <div class="bed-map-header">
+      <div class="bed-map-title" id="bed-map-title">📍 Bed Map</div>
+      <button class="zoom-btn" onclick="closeBedMap()" style="font-size:0.85rem;">✕</button>
+    </div>
+    <div class="bed-map-toolbar" id="bed-map-toolbar">
+      <button class="zoom-btn" onclick="changeBedZoom(-4)" title="Zoom out">−</button>
+      <span id="bed-zoom-label" style="font-size:0.8rem;color:var(--text-muted);min-width:50px;text-align:center;">48px</span>
+      <button class="zoom-btn" onclick="changeBedZoom(4)" title="Zoom in">＋</button>
+      <div style="flex:1;"></div>
+      <button class="product-photo-btn" style="margin:0;padding:5px 10px;font-size:0.78rem;" id="bed-paint-btn" onclick="togglePaintMode()">🖌 Paint</button>
+      <button class="product-photo-btn" style="margin:0;padding:5px 10px;font-size:0.78rem;" onclick="openBedSetup()">⚙️ Resize</button>
+    </div>
+    <div class="bed-map-scroll" id="bed-map-scroll">
+      <div id="bed-map-content"></div>
+    </div>
+    <div class="bed-legend" id="bed-legend"></div>
+  </div>
+</div>
+
+<!-- PLANT PICKER for painting cells -->
+<div class="paint-plant-picker" id="paint-plant-picker">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div style="font-weight:600;font-size:0.9rem;color:var(--green-dark);">Select plant to paint</div>
+    <button onclick="closePlantPicker()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;">✕</button>
+  </div>
+  <div id="paint-plant-list"></div>
+</div>
+
+<!-- BED SETUP MODAL -->
+<div class="modal-overlay" id="bed-setup-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">⚙️ Bed Size</h2>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px;">Set the grid dimensions for this bed. Each cell = 1 foot.</p>
+    <div class="bed-size-row">
+      <div>
+        <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Width (cols)</label>
+        <input class="bed-size-input" id="bed-cols-input" type="number" min="1" max="20" value="4">
+      </div>
+      <div style="font-size:1.2rem;color:var(--text-muted);padding-top:18px;">×</div>
+      <div>
+        <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Length (rows)</label>
+        <input class="bed-size-input" id="bed-rows-input" type="number" min="1" max="20" value="8">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="document.getElementById('bed-setup-modal').classList.remove('open')">Cancel</button>
+      <button class="btn-primary" onclick="saveBedSetup()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- PHOTO MODE PICKER -->
 <div class="modal-overlay" id="photo-mode-modal">
   <div class="modal" style="padding-bottom:24px;">
@@ -943,7 +1040,7 @@ async function deleteSheetRow(sheetName, itemsSnapshot, id) {
 async function loadAllData() {
   setSyncStatus('syncing', 'Loading your garden…');
   try {
-    await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare(), loadPhotos()]);
+    await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare(), loadPhotos(), loadBeds()]);
     setSyncStatus('synced', 'All data loaded ✓');
   } catch (e) {
     console.error('loadAllData error:', e);
@@ -1088,9 +1185,10 @@ async function deleteCalEvent(eventId) {
 function renderPlants() {
   const q = (document.getElementById('plant-search')?.value || '').toLowerCase();
   const beds = ['All', ...new Set(plants.map(p => p.bed).filter(Boolean))].sort((a,b) => a==='All'?-1:a.localeCompare(b));
-  document.getElementById('plant-filters').innerHTML = beds.map(b =>
-    `<button class="filter-chip${bedFilter===b?' active':''}" onclick="setBedFilter('${esc(b)}')">${esc(b)}</button>`
-  ).join('');
+  document.getElementById('plant-filters').innerHTML = beds.map(b => {
+    const mapBtn = b !== 'All' ? `<button class="bed-map-btn" onclick="event.stopPropagation();openBedMap('${esc(b)}')" title="View bed map">🗺</button>` : '';
+    return `<div class="filter-chip-wrap"><button class="filter-chip${bedFilter===b?' active':''}" onclick="setBedFilter('${esc(b)}')">${esc(b)}</button>${mapBtn}</div>`;
+  }).join('');
   const bedCount = new Set(plants.map(p => p.bed).filter(Boolean)).size;
   document.getElementById('plant-stats').innerHTML =
     `<div class="stat-chip"><strong>${plants.length}</strong> plant${plants.length!==1?'s':''}</div>` +
@@ -2370,6 +2468,304 @@ function productBadge(record) {
 }
 
 
+
+
+// ══════════════════════════════════════════
+//  BED MAP
+// ══════════════════════════════════════════
+let beds = [];           // [{id, bedName, cols, rows, cellData:{}}]
+let currentBedId = null;
+let bedCellSize  = 52;   // px per cell
+let paintMode    = false;
+let paintPlantId = null; // currently selected plant for painting
+let isPainting   = false;
+
+// ── Sheet helpers ──
+async function loadBeds() {
+  try {
+    const d = await sheetsReq('GET', '/values/Beds!A2:E');
+    beds = (d.values || []).map(r => ({
+      id: r[0]||'', bedName: r[1]||'', cols: parseInt(r[2]||'4'),
+      rows: parseInt(r[3]||'8'), cellData: JSON.parse(r[4]||'{}')
+    })).filter(b => b.id && b.bedName);
+  } catch(e) { console.error('loadBeds error:', e); beds = []; }
+}
+
+async function saveBedSheet(bed, isNew) {
+  const row = [bed.id, bed.bedName, bed.cols, bed.rows, JSON.stringify(bed.cellData)];
+  if (isNew) {
+    await sheetsReq('POST', '/values/Beds!A:E:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+  } else {
+    const n = beds.findIndex(b => b.id === bed.id) + 2;
+    await sheetsReq('PUT', `/values/Beds!A${n}:E${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+  }
+}
+
+function getOrCreateBed(bedName) {
+  let bed = beds.find(b => b.bedName.toLowerCase() === bedName.toLowerCase());
+  if (!bed) {
+    bed = { id: uid(), bedName, cols: 4, rows: 8, cellData: {} };
+    beds.push(bed);
+  }
+  return bed;
+}
+
+// ── Status color ──
+function statusClass(plant) {
+  if (!plant) return 'unknown';
+  const s = (plant.status||'').toLowerCase();
+  if (s.includes('seedling'))  return 'seedling';
+  if (s.includes('growing'))   return 'growing';
+  if (s.includes('flowering')) return 'flowering';
+  if (s.includes('ready'))     return 'ready';
+  if (s.includes('done'))      return 'done';
+  return 'unknown';
+}
+
+function statusColor(sc) {
+  return { seedling:'#81c784', growing:'#388e3c', flowering:'#f06292',
+           ready:'#f57c00', done:'#90a4ae', unknown:'#a5d6a7' }[sc] || '#a5d6a7';
+}
+
+// ── Open bed map ──
+async function openBedMap(bedName) {
+  currentBedId = null;
+  paintMode    = false;
+  paintPlantId = null;
+  document.getElementById('bed-map-title').textContent = '📍 ' + bedName;
+  document.getElementById('bed-map-overlay').classList.add('open');
+  document.getElementById('bed-paint-btn').textContent = '🖌 Paint';
+  document.getElementById('bed-paint-btn').style.background = '';
+
+  let bed = beds.find(b => b.bedName.toLowerCase() === bedName.toLowerCase());
+  if (!bed) {
+    // New bed — show setup first
+    bed = getOrCreateBed(bedName);
+    currentBedId = bed.id;
+    renderBedGrid();
+    openBedSetup();
+    return;
+  }
+  currentBedId = bed.id;
+  renderBedGrid();
+}
+
+function closeBedMap() {
+  document.getElementById('bed-map-overlay').classList.remove('open');
+  closePlantPicker();
+}
+document.getElementById('bed-map-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('bed-map-overlay')) closeBedMap();
+});
+
+// ── Render the grid ──
+function renderBedGrid() {
+  const bed = beds.find(b => b.id === currentBedId);
+  if (!bed) return;
+  const sz = bedCellSize;
+  document.getElementById('bed-zoom-label').textContent = sz + 'px';
+
+  // Build grid
+  let html = `<div class="bed-grid" id="bed-grid" style="grid-template-columns:repeat(${bed.cols},${sz}px);">`;
+  for (let r = 0; r < bed.rows; r++) {
+    for (let c = 0; c < bed.cols; c++) {
+      const key     = `${r},${c}`;
+      const plantId = bed.cellData[key];
+      const plant   = plantId ? plants.find(p => p.id === plantId) : null;
+      const sc      = statusClass(plant);
+      const label   = plant ? (plant.variety ? plant.name[0]+plant.variety[0] : plant.name.substring(0,4)) : '+';
+      const cls     = plant ? `filled status-${sc}` : 'empty';
+      html += `<div class="bed-cell ${cls}" style="width:${sz}px;height:${sz}px;font-size:${Math.max(8,sz/5)}px;"
+        data-key="${key}"
+        onpointerdown="handleCellPointerDown('${key}',event)"
+        onpointerenter="handleCellPointerEnter('${key}')"
+        onpointerup="handleCellPointerUp()"
+        title="${plant ? plant.name + (plant.variety?' ('+plant.variety+')':'') : 'Empty'}"
+      >${esc(label)}</div>`;
+    }
+  }
+  html += '</div>';
+
+  // Compass labels
+  html = `<div style="display:flex;align-items:flex-start;gap:8px;">
+    <div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;text-align:center;">N↑</div>
+      ${html}
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;text-align:center;">S↓</div>
+    </div>
+  </div>`;
+
+  document.getElementById('bed-map-content').innerHTML = html;
+
+  // Render legend
+  const planted = [...new Set(Object.values(bed.cellData))].map(pid => plants.find(p => p.id === pid)).filter(Boolean);
+  document.getElementById('bed-legend').innerHTML = planted.length
+    ? planted.map(p => {
+        const sc = statusClass(p);
+        return `<div class="bed-legend-item"><div class="bed-legend-dot" style="background:${statusColor(sc)}"></div>${esc(p.name)}${p.variety?' ('+esc(p.variety)+')':''}</div>`;
+      }).join('')
+    : '<div style="font-size:0.75rem;color:var(--text-muted);">Tap 🖌 Paint to assign plants to cells</div>';
+}
+
+// ── Zoom ──
+function changeBedZoom(delta) {
+  bedCellSize = Math.max(28, Math.min(96, bedCellSize + delta));
+  renderBedGrid();
+}
+
+// ── Paint mode ──
+function togglePaintMode() {
+  paintMode = !paintMode;
+  const btn = document.getElementById('bed-paint-btn');
+  btn.textContent = paintMode ? '🖌 Painting…' : '🖌 Paint';
+  btn.style.background = paintMode ? '#e8f5e9' : '';
+  if (paintMode) openPlantPicker();
+  else closePlantPicker();
+}
+
+function openPlantPicker() {
+  const bed = beds.find(b => b.id === currentBedId);
+  const bedPlants = plants.filter(p => bed && p.bed.toLowerCase() === bed.bedName.toLowerCase());
+  const allBedPlants = bedPlants.length ? bedPlants : plants;
+
+  document.getElementById('paint-plant-list').innerHTML = [
+    `<div class="paint-option ${paintPlantId===null?'selected':''}" onclick="selectPaintPlant(null)">
+      <div class="paint-color-dot" style="background:#f0ede6;border:1px dashed #999;"></div>
+      <span>Eraser (clear cell)</span>
+    </div>`
+  ].concat(allBedPlants.map(p => {
+    const sc = statusClass(p);
+    return `<div class="paint-option ${paintPlantId===p.id?'selected':''}" onclick="selectPaintPlant('${p.id}')">
+      <div class="paint-color-dot" style="background:${statusColor(sc)}"></div>
+      <span>${esc(p.name)}${p.variety?' ('+esc(p.variety)+')':''}</span>
+    </div>`;
+  })).join('');
+
+  document.getElementById('paint-plant-picker').classList.add('open');
+}
+
+function closePlantPicker() {
+  document.getElementById('paint-plant-picker').classList.remove('open');
+}
+
+function selectPaintPlant(plantId) {
+  paintPlantId = plantId;
+  closePlantPicker();
+  // Re-open picker items to reflect selection
+}
+
+// ── Cell interaction — tap or drag to paint ──
+function handleCellPointerDown(key, event) {
+  event.preventDefault();
+  if (paintMode) {
+    isPainting = true;
+    paintCell(key);
+  } else {
+    // Tap to inspect
+    inspectCell(key);
+  }
+}
+
+function handleCellPointerEnter(key) {
+  if (paintMode && isPainting) paintCell(key);
+}
+
+function handleCellPointerUp() {
+  if (isPainting) {
+    isPainting = false;
+    saveBedDebounced();
+  }
+}
+
+function paintCell(key) {
+  const bed = beds.find(b => b.id === currentBedId);
+  if (!bed) return;
+  if (paintPlantId === null) {
+    delete bed.cellData[key];
+  } else {
+    bed.cellData[key] = paintPlantId;
+  }
+  // Update just this cell visually for speed
+  const cell = document.querySelector(`[data-key="${key}"]`);
+  if (cell) {
+    const plant = paintPlantId ? plants.find(p => p.id === paintPlantId) : null;
+    const sc    = statusClass(plant);
+    const label = plant ? (plant.variety ? plant.name[0]+plant.variety[0] : plant.name.substring(0,4)) : '+';
+    cell.className = `bed-cell ${plant ? 'filled status-' + sc : 'empty'}`;
+    cell.style.cssText += `;width:${bedCellSize}px;height:${bedCellSize}px;font-size:${Math.max(8,bedCellSize/5)}px`;
+    cell.textContent = label;
+    cell.title = plant ? plant.name + (plant.variety?' ('+plant.variety+')':'') : 'Empty';
+  }
+}
+
+function inspectCell(key) {
+  const bed = beds.find(b => b.id === currentBedId);
+  if (!bed) return;
+  const plantId = bed.cellData[key];
+  if (!plantId) {
+    // Empty cell — offer to assign
+    if (confirm('This cell is empty. Switch to Paint mode (🖌) to assign a plant here.')) togglePaintMode();
+    return;
+  }
+  const plant = plants.find(p => p.id === plantId);
+  if (!plant) return;
+  const msg = `${plant.name}${plant.variety?' ('+plant.variety+')':''}
+` +
+    `Bed: ${plant.bed}
+` +
+    `Status: ${plant.status||'—'}
+` +
+    (plant.date ? `Planted: ${formatDate(plant.date)}
+` : '') +
+    (plant.harvestStart ? `Harvest: ${formatDate(plant.harvestStart)}${plant.harvestEnd?' – '+formatDate(plant.harvestEnd):''}` : plant.harvest || '');
+  alert(msg);
+}
+
+// ── Debounced save ──
+let bedSaveTimer = null;
+function saveBedDebounced() {
+  clearTimeout(bedSaveTimer);
+  bedSaveTimer = setTimeout(async () => {
+    const bed = beds.find(b => b.id === currentBedId);
+    if (!bed) return;
+    // Check if this bed exists in Sheets by seeing if it has a valid row index
+    const bedIndex = beds.findIndex(b => b.id === currentBedId);
+    const isNew = bedIndex < 0;
+    try {
+      await saveBedSheet(bed, isNew);
+      setSyncStatus('synced', 'Bed saved ✓');
+    } catch(e) { console.error('Bed save error:', e); }
+  }, 1500);
+}
+
+// ── Bed setup / resize ──
+function openBedSetup() {
+  const bed = beds.find(b => b.id === currentBedId);
+  if (bed) {
+    document.getElementById('bed-cols-input').value = bed.cols;
+    document.getElementById('bed-rows-input').value = bed.rows;
+  }
+  document.getElementById('bed-setup-modal').classList.add('open');
+}
+document.getElementById('bed-setup-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('bed-setup-modal')) document.getElementById('bed-setup-modal').classList.remove('open');
+});
+
+async function saveBedSetup() {
+  const cols = Math.max(1, Math.min(20, parseInt(document.getElementById('bed-cols-input').value)||4));
+  const rows = Math.max(1, Math.min(20, parseInt(document.getElementById('bed-rows-input').value)||8));
+  let bed = beds.find(b => b.id === currentBedId);
+  const isNew = !bed;
+  if (!bed) { bed = { id: currentBedId || uid(), bedName: document.getElementById('bed-map-title').textContent.replace('📍 ',''), cols, rows, cellData: {} }; beds.push(bed); }
+  bed.cols = cols;
+  bed.rows = rows;
+  document.getElementById('bed-setup-modal').classList.remove('open');
+  renderBedGrid();
+  try {
+    await saveBedSheet(bed, isNew);
+    setSyncStatus('synced', 'Bed saved ✓');
+  } catch(e) { console.error('Bed setup save error:', e); }
+}
 
 // ══════════════════════════════════════════
 //  PLANT MODAL — NOTES PTT
