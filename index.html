@@ -996,15 +996,88 @@ function showApp() {
   }
 }
 
+
+// ══════════════════════════════════════════
+//  BACK BUTTON HANDLER (PWA)
+// ══════════════════════════════════════════
+function getOpenModal() {
+  const modals = [
+    'plant-modal','harvest-modal','task-modal','care-modal',
+    'photo-modal','photo-history-modal','photo-mode-modal',
+    'companions-modal','care-tips-modal','bed-map-overlay',
+    'markdone-product-modal','bed-setup-modal',
+    'care-tips-modal','settings-overlay'
+  ];
+  return modals.find(id => {
+    const el = document.getElementById(id);
+    return el && (el.classList.contains('open') || el.classList.contains('show'));
+  });
+}
+
+function closeOpenModal(modalId) {
+  const closers = {
+    'plant-modal':             () => closePlantModal(),
+    'harvest-modal':           () => closeHarvestModal(),
+    'task-modal':              () => closeTaskModal(),
+    'care-modal':              () => closeCareModal(),
+    'photo-modal':             () => closePhotoModal(),
+    'photo-history-modal':     () => closePhotoHistoryModal(),
+    'photo-mode-modal':        () => document.getElementById('photo-mode-modal').classList.remove('open'),
+    'companions-modal':        () => document.getElementById('companions-modal').classList.remove('open'),
+    'care-tips-modal':         () => document.getElementById('care-tips-modal').classList.remove('open'),
+    'bed-map-overlay':         () => closeBedMap(),
+    'markdone-product-modal':  () => skipMarkDoneProduct(),
+    'bed-setup-modal':         () => document.getElementById('bed-setup-modal').classList.remove('open'),
+    'settings-overlay':        () => closeSettings(),
+  };
+  const fn = closers[modalId];
+  if (fn) fn();
+}
+
+window.addEventListener('popstate', (e) => {
+  // Check if any modal is open — close it
+  const openModal = getOpenModal();
+  if (openModal) {
+    closeOpenModal(openModal);
+    return;
+  }
+
+  // No modal open — if not on Plants tab, go to Plants
+  if (currentTab !== 'plants') {
+    switchTab('plants', false);
+    history.pushState({ type: 'tab', tab: 'plants' }, '', '#plants');
+    return;
+  }
+
+  // Already on Plants, nothing open — ask to exit
+  if (confirm('Exit Home Harvest?')) {
+    // In PWA standalone mode, close the app
+    window.close();
+    // Fallback for browsers that block window.close()
+    history.back();
+  } else {
+    // Put the state back so back button works again next time
+    history.pushState({ type: 'tab', tab: 'plants' }, '', '#plants');
+  }
+});
+
+// Set initial history state on load so first back press is intercepted
+function initHistory() {
+  history.replaceState({ type: 'tab', tab: 'plants' }, '', '#plants');
+}
+
 // ══════════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════════
-function switchTab(tab) {
+let currentTab = 'plants';
+function switchTab(tab, pushState = true) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + tab).classList.add('active');
   document.getElementById('nav-' + tab).classList.add('active');
   closeUserMenu();
+  currentTab = tab;
+  if (pushState) history.pushState({ type: 'tab', tab }, '', '#' + tab);
 }
 function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('show'); }
 function closeUserMenu()   { document.getElementById('user-menu').classList.remove('show'); }
@@ -1048,6 +1121,7 @@ async function loadAllData() {
   try {
     await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare(), loadPhotos(), loadBeds()]);
     setSyncStatus('synced', 'All data loaded ✓');
+    initHistory();
   } catch (e) {
     console.error('loadAllData error:', e);
     // Give a specific message based on what the error says
@@ -1350,7 +1424,7 @@ function openPlantModal(id = null) {
     document.getElementById('f-status').value = '';
     del.style.display = 'none';
   }
-  document.getElementById('plant-modal').classList.add('open');
+  document.getElementById('plant-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'plant-modal' }, '');
   setTimeout(() => document.getElementById('f-name').focus(), 300);
 }
 function closePlantModal() { document.getElementById('plant-modal').classList.remove('open'); }
@@ -1428,7 +1502,7 @@ function openHarvestModal(id = null) {
     document.getElementById('h-notes').value = '';
     del.style.display = 'none';
   }
-  document.getElementById('harvest-modal').classList.add('open');
+  document.getElementById('harvest-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'harvest-modal' }, '');
 }
 function closeHarvestModal() { document.getElementById('harvest-modal').classList.remove('open'); }
 document.getElementById('harvest-modal').addEventListener('click', e => { if (e.target === document.getElementById('harvest-modal')) closeHarvestModal(); });
@@ -1481,7 +1555,7 @@ function openTaskModal(id = null) {
     document.getElementById('t-cal').value   = 'yes';
     del.style.display = 'none';
   }
-  document.getElementById('task-modal').classList.add('open');
+  document.getElementById('task-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'task-modal' }, '');
   setTimeout(() => document.getElementById('t-title').focus(), 300);
 }
 function closeTaskModal() { document.getElementById('task-modal').classList.remove('open'); }
@@ -1601,7 +1675,7 @@ function openMarkDoneProductModal(id) {
     document.getElementById('md-product-notes').value  = care.productNotes || '';
   }
   document.getElementById('md-care-label').textContent = care.type + ' — ' + care.plant;
-  document.getElementById('markdone-product-modal').classList.add('open');
+  document.getElementById('markdone-product-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'markdone-product-modal' }, '');
 }
 
 async function _doMarkCareDone(id, productOverride) {
@@ -1796,7 +1870,7 @@ function openCareModal(id = null) {
     clearProductFields('c');
     del.style.display = 'none';
   }
-  document.getElementById('care-modal').classList.add('open');
+  document.getElementById('care-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'care-modal' }, '');
 }
 function closeCareModal() { document.getElementById('care-modal').classList.remove('open'); }
 document.getElementById('care-modal').addEventListener('click', e => { if (e.target === document.getElementById('care-modal')) closeCareModal(); });
@@ -1968,7 +2042,7 @@ function openPhotoCapture(plantId) {
   currentPhotoFileId   = null;
   currentDiagnosisText = null;
   currentPhotoDataUrl  = null;
-  document.getElementById('photo-mode-modal').classList.add('open');
+  document.getElementById('photo-mode-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'photo-mode-modal' }, '');
 }
 
 let photoDiagnoseMode = false;
@@ -2004,7 +2078,7 @@ async function handlePhotoSelected(event) {
     document.getElementById('photo-preview').style.display = 'block';
     document.getElementById('photo-task-form').style.display = 'none';
     document.getElementById('photo-main-actions').style.display = 'flex';
-    document.getElementById('photo-modal').classList.add('open');
+    document.getElementById('photo-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'photo-modal' }, '');
 
     if (!photoDiagnoseMode) {
       // Just a photo — upload and save immediately, no Gemini
@@ -2250,7 +2324,7 @@ function openPhotoHistory(plantId) {
       </div>`;
     }).join('');
   }
-  document.getElementById('photo-history-modal').classList.add('open');
+  document.getElementById('photo-history-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'photo-history-modal' }, '');
 }
 
 function addAnotherPhoto() {
@@ -2539,7 +2613,7 @@ async function openBedMap(bedName) {
   paintMode    = false;
   paintPlantId = null;
   document.getElementById('bed-map-title').textContent = '📍 ' + bedName;
-  document.getElementById('bed-map-overlay').classList.add('open');
+  document.getElementById('bed-map-overlay').classList.add('open'); history.pushState({ type: 'modal', modal: 'bed-map-overlay' }, '');
   document.getElementById('bed-paint-btn').textContent = '🖌 Paint';
   document.getElementById('bed-paint-btn').style.background = '';
 
@@ -2964,7 +3038,7 @@ async function openCompanions(plantName, variety) {
   const fullName = variety ? `${plantName} (${variety})` : plantName;
   document.getElementById('companions-title').textContent = `🌿 Companions for ${plantName}`;
   document.getElementById('companions-body').innerHTML = `<div class="tips-loading"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Finding companion plants…</div>`;
-  document.getElementById('companions-modal').classList.add('open');
+  document.getElementById('companions-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'companions-modal' }, '');
 
   const key = localStorage.getItem('hh_gemini_key');
   if (!key) {
@@ -3021,7 +3095,7 @@ document.getElementById('companions-modal').addEventListener('click', e => {
 async function openCareTips(plant, careType) {
   document.getElementById('care-tips-title').textContent = `💡 ${careType} Tips — ${plant}`;
   document.getElementById('care-tips-body').innerHTML = `<div class="tips-loading"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Getting tips from Gemini…</div>`;
-  document.getElementById('care-tips-modal').classList.add('open');
+  document.getElementById('care-tips-modal').classList.add('open'); history.pushState({ type: 'modal', modal: 'care-tips-modal' }, '');
 
   const key = localStorage.getItem('hh_gemini_key');
   if (!key) {
