@@ -67,7 +67,7 @@
 
   /* BOTTOM NAV */
   .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--green-dark); display: flex; border-top: 1px solid rgba(168,197,160,0.2); z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
-  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0 8px; border: none; background: transparent; color: var(--sage); font-family: 'DM Sans', sans-serif; font-size: 0.7rem; cursor: pointer; gap: 3px; min-height: 56px; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 0 6px; border: none; background: transparent; color: var(--sage); font-family: 'DM Sans', sans-serif; font-size: 0.62rem; cursor: pointer; gap: 2px; min-height: 56px; }
   .nav-btn.active { color: var(--amber-light); }
   .nav-icon { font-size: 1.4rem; line-height: 1; }
 
@@ -362,6 +362,18 @@
   .bed-map-btn { background:none;border:none;font-size:0.95rem;cursor:pointer;padding:2px 4px;border-radius:6px;line-height:1; }
   .bed-map-btn:active { background:#e8f5e9; }
 
+
+  /* MEDICINAL */
+  .medicinal-section { margin-bottom:16px; }
+  .medicinal-section-title { font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--green-dark);margin-bottom:8px;display:flex;align-items:center;gap:6px; }
+  .medicinal-uses-list { font-size:0.88rem;line-height:1.7;color:var(--text); }
+  .medicinal-uses-list p { margin-bottom:8px; }
+  .medicinal-disclaimer { font-size:0.76rem;color:var(--text-muted);font-style:italic;border-top:1px solid var(--border);padding-top:10px;margin-top:10px;line-height:1.5; }
+  .medicinal-chip { display:inline-flex;align-items:center;gap:4px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:20px;padding:4px 10px;font-size:0.8rem;color:#2e7d32;cursor:pointer;font-weight:500; }
+  .medicinal-chip:active { background:#c8e6c9; }
+  .medicinal-result-card { background:#f9fdf9;border:1.5px solid var(--sage);border-radius:12px;padding:14px 16px;margin-top:8px; }
+  .medicinal-plant-name { font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--green-dark);margin-bottom:10px; }
+
 </style>
 </head>
 <body>
@@ -448,6 +460,26 @@
       <div id="care-list"></div>
     </div>
 
+    <!-- MORE TAB -->
+    <div class="tab-panel" id="panel-more">
+      <div class="page-header">
+        <h2 class="page-title">More</h2>
+      </div>
+
+      <!-- MEDICINAL LOOKUP -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--green-dark);margin-bottom:4px;">🌿 Medicinal Plant Lookup</div>
+        <div style="font-size:0.83rem;color:var(--text-muted);margin-bottom:14px;">Look up the medicinal uses of any plant or herb.</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input class="form-input" id="medicinal-input" type="text" placeholder="e.g. Lavender, Echinacea, Chamomile…" style="flex:1;" onkeydown="if(event.key==='Enter')lookupMedicinal()">
+          <button class="btn-primary" style="white-space:nowrap;" onclick="lookupMedicinal()">Look up</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;" id="medicinal-plant-chips"></div>
+        <div id="medicinal-result"></div>
+      </div>
+
+    </div>
+
   </div>
 
   <nav class="bottom-nav">
@@ -455,6 +487,7 @@
     <button class="nav-btn"        id="nav-harvests" onclick="switchTab('harvests')"><span class="nav-icon">🧺</span><span>Harvests</span></button>
     <button class="nav-btn"        id="nav-tasks"    onclick="switchTab('tasks')">   <span class="nav-icon">✅</span><span>Tasks</span>    </button>
     <button class="nav-btn"        id="nav-care"     onclick="switchTab('care')">    <span class="nav-icon">💧</span><span>Care</span>     </button>
+    <button class="nav-btn"        id="nav-more"     onclick="switchTab('more')">    <span class="nav-icon">☰</span><span>More</span>      </button>
   </nav>
 </div>
 
@@ -759,6 +792,18 @@
   </div>
 </div>
 
+<!-- MEDICINAL MODAL -->
+<div class="modal-overlay" id="medicinal-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title" id="medicinal-modal-title">💊 Medicinal Uses</h2>
+    <div id="medicinal-modal-body" style="max-height:65vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-secondary" onclick="document.getElementById('medicinal-modal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- PHOTO MODE PICKER -->
 <div class="modal-overlay" id="photo-mode-modal">
   <div class="modal" style="padding-bottom:24px;">
@@ -1006,7 +1051,7 @@ function getOpenModal() {
     'photo-modal','photo-history-modal','photo-mode-modal',
     'companions-modal','care-tips-modal','bed-map-overlay',
     'markdone-product-modal','bed-setup-modal',
-    'care-tips-modal','settings-overlay'
+    'settings-overlay','medicinal-modal'
   ];
   return modals.find(id => {
     const el = document.getElementById(id);
@@ -1029,6 +1074,7 @@ function closeOpenModal(modalId) {
     'markdone-product-modal':  () => skipMarkDoneProduct(),
     'bed-setup-modal':         () => document.getElementById('bed-setup-modal').classList.remove('open'),
     'settings-overlay':        () => closeSettings(),
+    'medicinal-modal':         () => document.getElementById('medicinal-modal').classList.remove('open'),
   };
   const fn = closers[modalId];
   if (fn) fn();
@@ -1122,6 +1168,7 @@ async function loadAllData() {
     await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare(), loadPhotos(), loadBeds()]);
     setSyncStatus('synced', 'All data loaded ✓');
     initHistory();
+    populateMedicinalChips();
   } catch (e) {
     console.error('loadAllData error:', e);
     // Give a specific message based on what the error says
@@ -1325,7 +1372,7 @@ function plantCard(p) {
   const viewPhotosBtn = plantPhotoCount > 0
     ? `<button class="btn-icon" onclick="event.stopPropagation();openPhotoHistory('${p.id}')" title="View ${plantPhotoCount} photo${plantPhotoCount>1?'s':''}">🖼️</button>`
     : '';
-  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions">${viewPhotosBtn}<button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openCompanions('${esc(p.name)}','${esc(p.variety||'')}')" title="Companion plants">🌿</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvestStart?`<span class="tag tag-harvest">🍅 Harvest ${formatDate(p.harvestStart)}${p.harvestEnd?' – '+formatDate(p.harvestEnd):''}</span>`:p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}${productHistoryHtml}</div>`;
+  return `<div class="card"><div class="card-header"><div><div class="card-title">${esc(p.name)}</div>${p.variety?`<div class="card-subtitle">${esc(p.variety)}</div>`:''}</div><div class="card-actions">${viewPhotosBtn}<button class="btn-icon" onclick="openPhotoCapture('${p.id}')" title="Add photo">📷</button><button class="btn-icon" onclick="openCompanions('${esc(p.name)}','${esc(p.variety||'')}')" title="Companion plants">🌿</button><button class="btn-icon" onclick="openMedicinalFromPlant('${esc(p.name)}','${esc(p.variety||'')}')" title="Medicinal uses">💊</button><button class="btn-icon" onclick="openPlantModal('${p.id}')">✏️</button></div></div><div class="card-tags">${p.status?`<span class="tag tag-status ${sc}">${esc(p.status)}</span>`:''} ${ds?`<span class="tag tag-date">Planted ${ds}</span>`:''} ${p.harvestStart?`<span class="tag tag-harvest">🍅 Harvest ${formatDate(p.harvestStart)}${p.harvestEnd?' – '+formatDate(p.harvestEnd):''}</span>`:p.harvest?`<span class="tag tag-harvest">🍅 ${esc(p.harvest)}</span>`:''}</div>${p.notes?`<div class="card-notes">${esc(p.notes)}</div>`:''}${productHistoryHtml}</div>`;
 }
 
 // ══════════════════════════════════════════
@@ -3030,6 +3077,132 @@ async function handleHarvestCalEvent(plant) {
     }
   } catch(e) { console.error('Harvest cal event error:', e); }
 }
+
+
+// ══════════════════════════════════════════
+//  MEDICINAL LOOKUP — Gemini powered
+// ══════════════════════════════════════════
+
+// Called from plant card 💊 button
+function openMedicinalFromPlant(plantName, variety) {
+  const fullName = variety ? `${plantName} (${variety})` : plantName;
+  document.getElementById('medicinal-modal-title').textContent = `💊 ${plantName}`;
+  document.getElementById('medicinal-modal-body').innerHTML =
+    `<div class="tips-loading"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Looking up medicinal uses…</div>`;
+  document.getElementById('medicinal-modal').classList.add('open');
+  history.pushState({ type: 'modal', modal: 'medicinal-modal' }, '');
+  fetchMedicinalUses(fullName, 'medicinal-modal-body');
+}
+
+// Called from More tab lookup
+async function lookupMedicinal() {
+  const input = document.getElementById('medicinal-input').value.trim();
+  if (!input) { showToast('Enter a plant name to look up.'); return; }
+  const resultEl = document.getElementById('medicinal-result');
+  resultEl.innerHTML = `<div class="tips-loading"><div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> Looking up medicinal uses…</div>`;
+  await fetchMedicinalUses(input, 'medicinal-result');
+  // Add to recent chips
+  addMedicinalChip(input);
+}
+
+function addMedicinalChip(name) {
+  const chips = document.getElementById('medicinal-plant-chips');
+  // Don't duplicate
+  const existing = [...chips.querySelectorAll('.medicinal-chip')].find(c => c.dataset.name === name);
+  if (existing) return;
+  const chip = document.createElement('span');
+  chip.className = 'medicinal-chip';
+  chip.dataset.name = name;
+  chip.textContent = '🌿 ' + name;
+  chip.onclick = () => {
+    document.getElementById('medicinal-input').value = name;
+    lookupMedicinal();
+  };
+  chips.insertBefore(chip, chips.firstChild);
+  // Keep max 6 chips
+  while (chips.children.length > 6) chips.removeChild(chips.lastChild);
+}
+
+// Pre-populate More tab chips from current plants
+function populateMedicinalChips() {
+  const chips = document.getElementById('medicinal-plant-chips');
+  if (!chips || plants.length === 0) return;
+  const unique = [...new Set(plants.map(p => p.name))].slice(0, 6);
+  chips.innerHTML = unique.map(name =>
+    `<span class="medicinal-chip" data-name="${esc(name)}" onclick="document.getElementById('medicinal-input').value='${esc(name)}';lookupMedicinal()">🌿 ${esc(name)}</span>`
+  ).join('');
+}
+
+async function fetchMedicinalUses(plantName, targetId) {
+  const key = localStorage.getItem('hh_gemini_key');
+  const el  = document.getElementById(targetId);
+  if (!key) {
+    el.innerHTML = `<p style="color:var(--text-muted);font-size:0.85rem;">Add your Gemini API key in Settings to look up medicinal uses.</p>`;
+    return;
+  }
+
+  try {
+    const prompt = `What are the traditional and evidence-based medicinal uses of ${plantName}? Structure your response as JSON only (no markdown):
+{
+  "commonName": "most common name",
+  "otherNames": ["alternate name 1", "alternate name 2"],
+  "traditionalUses": ["use 1", "use 2", "use 3"],
+  "activeCompounds": "brief sentence about key active compounds if known",
+  "preparation": "brief sentence about how it is typically prepared or used (tea, tincture, topical, etc)",
+  "cautions": "any important safety notes, drug interactions, or contraindications",
+  "edible": true or false
+}
+If this plant has no notable medicinal uses, set traditionalUses to an empty array and explain briefly in cautions.`;
+
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data  = await res.json();
+    const raw   = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const r     = JSON.parse(clean);
+
+    const usesHtml = r.traditionalUses?.length
+      ? r.traditionalUses.map(u => `<p>• ${esc(u)}</p>`).join('')
+      : '<p style="color:var(--text-muted);">No notable medicinal uses found for this plant.</p>';
+
+    el.innerHTML = `
+      <div class="medicinal-result-card">
+        <div class="medicinal-plant-name">${esc(r.commonName || plantName)}</div>
+        ${r.otherNames?.length ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px;">Also known as: ${r.otherNames.map(n=>esc(n)).join(', ')}</div>` : ''}
+        ${r.traditionalUses?.length ? `<div class="medicinal-section">
+          <div class="medicinal-section-title">🌿 Traditional Uses</div>
+          <div class="medicinal-uses-list">${usesHtml}</div>
+        </div>` : usesHtml}
+        ${r.activeCompounds ? `<div class="medicinal-section">
+          <div class="medicinal-section-title">🔬 Active Compounds</div>
+          <div style="font-size:0.85rem;line-height:1.6;color:var(--text);">${esc(r.activeCompounds)}</div>
+        </div>` : ''}
+        ${r.preparation ? `<div class="medicinal-section">
+          <div class="medicinal-section-title">🫖 How to Use</div>
+          <div style="font-size:0.85rem;line-height:1.6;color:var(--text);">${esc(r.preparation)}</div>
+        </div>` : ''}
+        ${r.cautions ? `<div class="medicinal-section">
+          <div class="medicinal-section-title" style="color:#c62828;">⚠️ Cautions</div>
+          <div style="font-size:0.85rem;line-height:1.6;color:var(--text);">${esc(r.cautions)}</div>
+        </div>` : ''}
+        ${r.edible ? `<div style="display:inline-flex;align-items:center;gap:6px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:20px;padding:4px 12px;font-size:0.8rem;color:#2e7d32;font-weight:500;margin-bottom:8px;">✓ Edible</div>` : ''}
+        <div class="medicinal-disclaimer">⚕️ This information is for educational purposes only and is not medical advice. Always consult a healthcare professional before using plants medicinally, especially if pregnant, nursing, or taking medications.</div>
+      </div>`;
+  } catch(e) {
+    console.error('Medicinal lookup error:', e);
+    document.getElementById(targetId).innerHTML =
+      `<p style="color:var(--text-muted);font-size:0.85rem;">Could not look up medicinal uses — check your Gemini API key in Settings.</p>`;
+  }
+}
+
+document.getElementById('medicinal-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('medicinal-modal'))
+    document.getElementById('medicinal-modal').classList.remove('open');
+});
 
 // ══════════════════════════════════════════
 //  COMPANION PLANTS — Gemini powered
