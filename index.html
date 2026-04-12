@@ -181,6 +181,42 @@
   .btn-done { background: var(--green); color: white; border: none; border-radius: 8px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; cursor: pointer; white-space: nowrap; min-height: 36px; }
   .btn-done:active { background: var(--green-mid); }
 
+  /* DASHBOARD */
+  .dash-greeting { background: var(--green-dark); color: white; border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px; }
+  .dash-greeting-sub { color: var(--sage); font-size: 0.82rem; margin-top: 2px; }
+  .dash-greeting h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; line-height: 1.3; }
+
+  .dash-alert-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .dash-alert { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; }
+  .dash-alert.red   { background: #ffebee; color: var(--red); }
+  .dash-alert.amber { background: #fff8e1; color: var(--amber); }
+  .dash-alert.green { background: #e8f5e9; color: #2e7d32; }
+
+  .dash-section { margin-bottom: 20px; }
+  .dash-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+  .dash-see-all { font-size: 0.75rem; font-weight: 500; color: var(--green-mid); background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; padding: 0; }
+
+  .dash-row { background: var(--warm-white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(216,212,200,0.6); overflow: hidden; }
+  .dash-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  .dash-item:last-child { border-bottom: none; }
+  .dash-item-icon { font-size: 1.2rem; flex-shrink: 0; width: 28px; text-align: center; }
+  .dash-item-body { flex: 1; min-width: 0; }
+  .dash-item-title { font-size: 0.9rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash-item-sub { font-size: 0.76rem; color: var(--text-muted); margin-top: 1px; }
+  .dash-item-action { flex-shrink: 0; }
+
+  .dash-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .dash-stat { background: var(--warm-white); border: 1px solid rgba(216,212,200,0.6); border-radius: var(--radius); padding: 14px 12px; text-align: center; box-shadow: var(--shadow); }
+  .dash-stat-val { font-size: 1.6rem; font-weight: 700; color: var(--green-dark); line-height: 1; margin-bottom: 4px; }
+  .dash-stat-lbl { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .dash-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .dash-action-btn { display: flex; align-items: center; gap: 8px; padding: 13px 14px; background: var(--warm-white); border: 1.5px solid var(--border); border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; color: var(--text); cursor: pointer; box-shadow: var(--shadow); }
+  .dash-action-btn:active { background: var(--cream); }
+  .dash-action-icon { font-size: 1.2rem; }
+
+  .dash-empty-row { padding: 14px 16px; color: var(--text-muted); font-size: 0.84rem; font-style: italic; background: var(--warm-white); border-radius: var(--radius); border: 1px solid rgba(216,212,200,0.6); }
+
   /* COMING SOON */
   .coming-soon { text-align: center; padding: 60px 24px; color: var(--text-muted); }
   .coming-soon .icon { font-size: 3rem; margin-bottom: 16px; }
@@ -413,8 +449,24 @@
 
   <div class="content">
 
+    <!-- DASHBOARD -->
+    <div class="tab-panel active" id="panel-home">
+      <div id="dash-greeting"></div>
+      <div id="dash-alerts"></div>
+      <div class="dash-stats" id="dash-stats"></div>
+      <div class="dash-section" id="dash-harvest-ready"></div>
+      <div class="dash-section" id="dash-care-due"></div>
+      <div class="dash-section" id="dash-tasks-due"></div>
+      <div class="dash-actions">
+        <button class="dash-action-btn" onclick="openPlantModal()"><span class="dash-action-icon">🌱</span> Add Plant</button>
+        <button class="dash-action-btn" onclick="openHarvestModal()"><span class="dash-action-icon">🧺</span> Log Harvest</button>
+        <button class="dash-action-btn" onclick="openTaskModal()"><span class="dash-action-icon">✅</span> Add Task</button>
+        <button class="dash-action-btn" onclick="openCareModal()"><span class="dash-action-icon">💧</span> Add Care</button>
+      </div>
+    </div>
+
     <!-- PLANTS -->
-    <div class="tab-panel active" id="panel-plants">
+    <div class="tab-panel" id="panel-plants">
       <div class="page-header">
         <h2 class="page-title">My Garden</h2>
         <button class="btn-add" onclick="openPlantModal()">＋ Add Plant</button>
@@ -483,7 +535,8 @@
   </div>
 
   <nav class="bottom-nav">
-    <button class="nav-btn active" id="nav-plants"   onclick="switchTab('plants')">  <span class="nav-icon">🌱</span><span>Plants</span>   </button>
+    <button class="nav-btn active" id="nav-home"     onclick="switchTab('home')">    <span class="nav-icon">🏡</span><span>Home</span>     </button>
+    <button class="nav-btn"        id="nav-plants"   onclick="switchTab('plants')">  <span class="nav-icon">🌱</span><span>Plants</span>   </button>
     <button class="nav-btn"        id="nav-harvests" onclick="switchTab('harvests')"><span class="nav-icon">🧺</span><span>Harvests</span></button>
     <button class="nav-btn"        id="nav-tasks"    onclick="switchTab('tasks')">   <span class="nav-icon">✅</span><span>Tasks</span>    </button>
     <button class="nav-btn"        id="nav-care"     onclick="switchTab('care')">    <span class="nav-icon">💧</span><span>Care</span>     </button>
@@ -554,7 +607,7 @@
       <button class="btn-secondary" onclick="closePlantModal()">Cancel</button>
       <button class="btn-primary" onclick="savePlant()">Save Plant</button>
     </div>
-    <button class="btn-danger" id="btn-delete-plant" onclick="deletePlant()" style="display:none;">Delete Plant</button>
+    <button class="btn-danger" id="btn-delete-plant" onclick="removePlant()" style="display:none;">Remove Plant</button>
   </div>
 </div>
 
@@ -584,7 +637,7 @@
       <button class="btn-secondary" onclick="closeHarvestModal()">Cancel</button>
       <button class="btn-primary" onclick="saveHarvest()">Save Harvest</button>
     </div>
-    <button class="btn-danger" id="btn-delete-harvest" onclick="deleteHarvest()" style="display:none;">Delete Entry</button>
+    <button class="btn-danger" id="btn-delete-harvest" onclick="removeHarvest()" style="display:none;">Remove Entry</button>
   </div>
 </div>
 
@@ -628,7 +681,7 @@
       <button class="btn-secondary" onclick="closeTaskModal()">Cancel</button>
       <button class="btn-primary" onclick="saveTask()">Save Task</button>
     </div>
-    <button class="btn-danger" id="btn-delete-task" onclick="deleteTask()" style="display:none;">Delete Task</button>
+    <button class="btn-danger" id="btn-delete-task" onclick="removeTask()" style="display:none;">Remove Task</button>
   </div>
 </div>
 
@@ -683,7 +736,7 @@
       <button class="btn-secondary" onclick="closeCareModal()">Cancel</button>
       <button class="btn-primary" onclick="saveCare()">Save Schedule</button>
     </div>
-    <button class="btn-danger" id="btn-delete-care" onclick="deleteCare()" style="display:none;">Delete Schedule</button>
+    <button class="btn-danger" id="btn-delete-care" onclick="removeCare()" style="display:none;">Remove Schedule</button>
   </div>
 </div>
 
@@ -1088,14 +1141,14 @@ window.addEventListener('popstate', (e) => {
     return;
   }
 
-  // No modal open — if not on Plants tab, go to Plants
-  if (currentTab !== 'plants') {
-    switchTab('plants', false);
-    history.pushState({ type: 'tab', tab: 'plants' }, '', '#plants');
+  // No modal open — if not on Home tab, go to Home
+  if (currentTab !== 'home') {
+    switchTab('home', false);
+    history.pushState({ type: 'tab', tab: 'home' }, '', '#home');
     return;
   }
 
-  // Already on Plants, nothing open — ask to exit
+  // Already on Home, nothing open — ask to exit
   if (confirm('Exit Home Harvest?')) {
     // In PWA standalone mode, close the app
     window.close();
@@ -1109,13 +1162,13 @@ window.addEventListener('popstate', (e) => {
 
 // Set initial history state on load so first back press is intercepted
 function initHistory() {
-  history.replaceState({ type: 'tab', tab: 'plants' }, '', '#plants');
+  history.replaceState({ type: 'tab', tab: 'home' }, '', '#home');
 }
 
 // ══════════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════════
-let currentTab = 'plants';
+let currentTab = 'home';
 function switchTab(tab, pushState = true) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -1148,15 +1201,10 @@ async function sheetsReq(method, endpoint, body = null) {
   return res.json();
 }
 
-// Generic row-delete helper (used by plants, harvests, tasks)
-async function deleteSheetRow(sheetName, itemsSnapshot, id) {
-  const meta  = await sheetsReq('GET', '?fields=sheets(properties(sheetId,title))');
-  const sheet = meta.sheets.find(s => s.properties.title === sheetName);
-  if (!sheet) throw new Error(sheetName + ' tab not found');
-  const rowIndex = itemsSnapshot.findIndex(x => x.id === id) + 1; // +1 for header row offset
-  await sheetsReq('POST', ':batchUpdate', {
-    requests: [{ deleteDimension: { range: { sheetId: sheet.properties.sheetId, dimension: 'ROWS', startIndex: rowIndex, endIndex: rowIndex + 1 } } }]
-  });
+// Mark a row as removed by writing "Y" to its removed column — never deletes from the sheet
+async function markRowRemoved(sheetName, removedCol, itemsSnapshot, id) {
+  const rowNum = itemsSnapshot.findIndex(x => x.id === id) + 2; // +2: 1 for header, 1 for 1-based
+  await sheetsReq('PUT', `/values/${encodeURIComponent(sheetName)}!${removedCol}${rowNum}?valueInputOption=USER_ENTERED`, { values: [['Y']] });
 }
 
 // ══════════════════════════════════════════
@@ -1166,6 +1214,7 @@ async function loadAllData() {
   setSyncStatus('syncing', 'Loading your garden…');
   try {
     await Promise.all([loadPlants(), loadHarvests(), loadTasks(), loadCare(), loadPhotos(), loadBeds()]);
+    renderDashboard();
     setSyncStatus('synced', 'All data loaded ✓');
     initHistory();
     populateMedicinalChips();
@@ -1188,12 +1237,12 @@ async function loadAllData() {
 
 // ── PLANTS ──
 async function loadPlants() {
-  const d = await sheetsReq('GET', '/values/Plants!A2:L');
+  const d = await sheetsReq('GET', '/values/Plants!A2:M');
   plants = (d.values || []).map(r => ({
     id: r[0]||'', name: r[1]||'', variety: r[2]||'', bed: r[3]||'',
     date: r[4]||'', status: r[5]||'', harvest: r[6]||'', notes: r[7]||'', photo: r[8]||'',
-    harvestCalEventId: r[9]||'', harvestStart: r[10]||'', harvestEnd: r[11]||''
-  })).filter(p => p.id && p.name);
+    harvestCalEventId: r[9]||'', harvestStart: r[10]||'', harvestEnd: r[11]||'', removed: r[12]||''
+  })).filter(p => p.id && p.name && p.removed !== 'Y');
   renderPlants();
 }
 
@@ -1224,50 +1273,50 @@ function normalizeBed(bed) {
 }
 
 async function savePlantSheet(plant, isNew) {
-  const row = [plant.id, plant.name, plant.variety, plant.bed, plant.date, plant.status, plant.harvest, plant.notes, plant.photo, plant.harvestCalEventId||'', plant.harvestStart||'', plant.harvestEnd||''];
+  const row = [plant.id, plant.name, plant.variety, plant.bed, plant.date, plant.status, plant.harvest, plant.notes, plant.photo, plant.harvestCalEventId||'', plant.harvestStart||'', plant.harvestEnd||'', plant.removed||''];
   if (isNew) {
-    await sheetsReq('POST', '/values/Plants!A:L:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+    await sheetsReq('POST', '/values/Plants!A:M:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
   } else {
     const n = plants.findIndex(p => p.id === plant.id) + 2;
-    await sheetsReq('PUT', `/values/Plants!A${n}:L${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+    await sheetsReq('PUT', `/values/Plants!A${n}:M${n}?valueInputOption=USER_ENTERED`, { values: [row] });
   }
 }
 
 // ── HARVESTS ──
 async function loadHarvests() {
-  const d = await sheetsReq('GET', '/values/Harvests!A2:F');
+  const d = await sheetsReq('GET', '/values/Harvests!A2:G');
   harvests = (d.values || []).map(r => ({
-    id: r[0]||'', date: r[1]||'', plant: r[2]||'', qty: r[3]||'', unit: r[4]||'count', notes: r[5]||''
-  })).filter(h => h.id && h.plant);
+    id: r[0]||'', date: r[1]||'', plant: r[2]||'', qty: r[3]||'', unit: r[4]||'count', notes: r[5]||'', removed: r[6]||''
+  })).filter(h => h.id && h.plant && h.removed !== 'Y');
   renderHarvests();
 }
 async function saveHarvestSheet(harvest, isNew) {
-  const row = [harvest.id, harvest.date, harvest.plant, harvest.qty, harvest.unit, harvest.notes];
+  const row = [harvest.id, harvest.date, harvest.plant, harvest.qty, harvest.unit, harvest.notes, harvest.removed||''];
   if (isNew) {
-    await sheetsReq('POST', '/values/Harvests!A:F:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+    await sheetsReq('POST', '/values/Harvests!A:G:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
   } else {
     const n = harvests.findIndex(h => h.id === harvest.id) + 2;
-    await sheetsReq('PUT', `/values/Harvests!A${n}:F${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+    await sheetsReq('PUT', `/values/Harvests!A${n}:G${n}?valueInputOption=USER_ENTERED`, { values: [row] });
   }
 }
 
 // ── TASKS ──
 async function loadTasks() {
-  const d = await sheetsReq('GET', '/values/Tasks!A2:K');
+  const d = await sheetsReq('GET', '/values/Tasks!A2:L');
   tasks = (d.values || []).map(r => ({
     id: r[0]||'', title: r[1]||'', due: r[2]||'', completed: r[3]||'N', calEventId: r[4]||'', notes: r[5]||'',
-    productName: r[6]||'', productType: r[7]||'', productAmount: r[8]||'', productNotes: r[9]||'', productPhotoId: r[10]||''
-  })).filter(t => t.id && t.title);
+    productName: r[6]||'', productType: r[7]||'', productAmount: r[8]||'', productNotes: r[9]||'', productPhotoId: r[10]||'', removed: r[11]||''
+  })).filter(t => t.id && t.title && t.removed !== 'Y');
   renderTasks();
 }
 async function saveTaskSheet(task, isNew) {
   const row = [task.id, task.title, task.due, task.completed, task.calEventId, task.notes,
-    task.productName||'', task.productType||'', task.productAmount||'', task.productNotes||'', task.productPhotoId||''];
+    task.productName||'', task.productType||'', task.productAmount||'', task.productNotes||'', task.productPhotoId||'', task.removed||''];
   if (isNew) {
-    await sheetsReq('POST', '/values/Tasks!A:K:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+    await sheetsReq('POST', '/values/Tasks!A:L:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
   } else {
     const n = tasks.findIndex(t => t.id === task.id) + 2;
-    await sheetsReq('PUT', `/values/Tasks!A${n}:K${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+    await sheetsReq('PUT', `/values/Tasks!A${n}:L${n}?valueInputOption=USER_ENTERED`, { values: [row] });
   }
 }
 
@@ -1510,15 +1559,15 @@ async function savePlant() {
   try { await savePlantSheet(plant, isNew); setSyncStatus('synced', 'Saved ✓'); }
   catch (e) { showToast('Sync error — reloading…'); loadPlants(); }
 }
-async function deletePlant() {
+async function removePlant() {
   const id = document.getElementById('btn-delete-plant').getAttribute('data-id');
   const plant = plants.find(p => p.id === id); if (!plant) return;
-  if (!confirm(`Remove "${plant.name}"?`)) return;
+  if (!confirm(`Remove "${plant.name}" from the app? The history will be kept in your sheet.`)) return;
   const snap = [...plants];
   plants = plants.filter(p => p.id !== id);
   closePlantModal(); renderPlants(); showToast('Plant removed.');
-  try { await deleteSheetRow('Plants', snap, id); }
-  catch (e) { showToast('Delete failed — reloading…'); loadPlants(); }
+  try { await markRowRemoved('Plants', 'M', snap, id); }
+  catch (e) { showToast('Remove failed — reloading…'); loadPlants(); }
 }
 
 // ══════════════════════════════════════════
@@ -1567,14 +1616,14 @@ async function saveHarvest() {
   try { await saveHarvestSheet(harvest, isNew); setSyncStatus('synced', 'Saved ✓'); }
   catch (e) { showToast('Sync error — reloading…'); loadHarvests(); }
 }
-async function deleteHarvest() {
+async function removeHarvest() {
   const id = document.getElementById('btn-delete-harvest').getAttribute('data-id');
-  if (!confirm('Delete this harvest entry?')) return;
+  if (!confirm('Remove this harvest entry? The history will be kept in your sheet.')) return;
   const snap = [...harvests];
   harvests = harvests.filter(h => h.id !== id);
-  closeHarvestModal(); renderHarvests(); showToast('Harvest deleted.');
-  try { await deleteSheetRow('Harvests', snap, id); }
-  catch (e) { showToast('Delete failed — reloading…'); loadHarvests(); }
+  closeHarvestModal(); renderHarvests(); showToast('Harvest removed.');
+  try { await markRowRemoved('Harvests', 'G', snap, id); }
+  catch (e) { showToast('Remove failed — reloading…'); loadHarvests(); }
 }
 
 // ══════════════════════════════════════════
@@ -1641,22 +1690,22 @@ async function saveTask() {
 async function toggleTask(id) {
   const task = tasks.find(t => t.id === id); if (!task) return;
   task.completed = task.completed === 'Y' ? 'N' : 'Y';
-  renderTasks();
+  renderTasks(); renderDashboard();
   try { await saveTaskSheet(task, false); }
-  catch (e) { task.completed = task.completed === 'Y' ? 'N' : 'Y'; renderTasks(); showToast('Could not save.'); }
+  catch (e) { task.completed = task.completed === 'Y' ? 'N' : 'Y'; renderTasks(); renderDashboard(); showToast('Could not save.'); }
 }
 
-async function deleteTask() {
+async function removeTask() {
   const id = document.getElementById('btn-delete-task').getAttribute('data-id');
   const task = tasks.find(t => t.id === id); if (!task) return;
-  if (!confirm('Delete this task?')) return;
+  if (!confirm('Remove this task? The history will be kept in your sheet.')) return;
   const snap = [...tasks];
   const calId = task.calEventId;
   tasks = tasks.filter(t => t.id !== id);
-  closeTaskModal(); renderTasks(); showToast('Task deleted.');
-  if (calId) await deleteCalEvent(calId); // Remove from Google Calendar too
-  try { await deleteSheetRow('Tasks', snap, id); }
-  catch (e) { showToast('Delete failed — reloading…'); loadTasks(); }
+  closeTaskModal(); renderTasks(); showToast('Task removed.');
+  if (calId) await deleteCalEvent(calId); // Remove the calendar reminder
+  try { await markRowRemoved('Tasks', 'L', snap, id); }
+  catch (e) { showToast('Remove failed — reloading…'); loadTasks(); }
 }
 
 // ══════════════════════════════════════════
@@ -1665,23 +1714,23 @@ async function deleteTask() {
 let careSchedules = [];
 
 async function loadCare() {
-  const d = await sheetsReq('GET', '/values/Care Schedule!A2:L');
+  const d = await sheetsReq('GET', '/values/Care Schedule!A2:M');
   careSchedules = (d.values || []).map(r => ({
     id: r[0]||'', plant: r[1]||'', type: r[2]||'', freqDays: parseInt(r[3]||'1'),
     lastDone: r[4]||'', nextDue: r[5]||'', calEventId: r[6]||'',
-    productName: r[7]||'', productType: r[8]||'', productAmount: r[9]||'', productNotes: r[10]||'', productPhotoId: r[11]||''
-  })).filter(c => c.id && c.plant);
+    productName: r[7]||'', productType: r[8]||'', productAmount: r[9]||'', productNotes: r[10]||'', productPhotoId: r[11]||'', removed: r[12]||''
+  })).filter(c => c.id && c.plant && c.removed !== 'Y');
   renderCare();
 }
 
 async function saveCareSheet(care, isNew) {
   const row = [care.id, care.plant, care.type, care.freqDays, care.lastDone, care.nextDue, care.calEventId,
-    care.productName||'', care.productType||'', care.productAmount||'', care.productNotes||'', care.productPhotoId||''];
+    care.productName||'', care.productType||'', care.productAmount||'', care.productNotes||'', care.productPhotoId||'', care.removed||''];
   if (isNew) {
-    await sheetsReq('POST', '/values/Care Schedule!A:L:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
+    await sheetsReq('POST', '/values/Care Schedule!A:M:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS', { values: [row] });
   } else {
     const n = careSchedules.findIndex(c => c.id === care.id) + 2;
-    await sheetsReq('PUT', `/values/Care Schedule!A${n}:L${n}?valueInputOption=USER_ENTERED`, { values: [row] });
+    await sheetsReq('PUT', `/values/Care Schedule!A${n}:M${n}?valueInputOption=USER_ENTERED`, { values: [row] });
   }
 }
 
@@ -1753,7 +1802,7 @@ async function _doMarkCareDone(id, productOverride) {
   care.lastDone   = today;
   care.nextDue    = nextDue;
   care.calEventId = '';
-  renderCare();
+  renderCare(); renderDashboard();
 
   const nextLabel = new Date(nextDue + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   showUndoToast('✓ Done! Next: ' + nextLabel, 5000);
@@ -1972,17 +2021,146 @@ async function saveCare() {
   catch (e) { showToast('Sync error — reloading…'); loadCare(); }
 }
 
-async function deleteCare() {
+async function removeCare() {
   const id   = document.getElementById('btn-delete-care').getAttribute('data-id');
   const care = careSchedules.find(c => c.id === id); if (!care) return;
-  if (!confirm(`Delete "${care.type}" schedule for ${care.plant}?`)) return;
+  if (!confirm(`Remove "${care.type}" schedule for ${care.plant}? The history will be kept in your sheet.`)) return;
   const snap   = [...careSchedules];
   const calId  = care.calEventId;
   careSchedules = careSchedules.filter(c => c.id !== id);
-  closeCareModal(); renderCare(); showToast('Schedule deleted.');
-  if (calId) await deleteCalEvent(calId);
-  try { await deleteSheetRow('Care Schedule', snap, id); }
-  catch (e) { showToast('Delete failed — reloading…'); loadCare(); }
+  closeCareModal(); renderCare(); showToast('Schedule removed.');
+  if (calId) await deleteCalEvent(calId); // Remove the calendar reminder
+  try { await markRowRemoved('Care Schedule', 'M', snap, id); }
+  catch (e) { showToast('Remove failed — reloading…'); loadCare(); }
+}
+
+// ══════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════
+function renderDashboard() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const name = currentUser?.name?.split(' ')[0] || 'Gardener';
+
+  // ── Greeting ──
+  document.getElementById('dash-greeting').innerHTML = `
+    <div class="dash-greeting">
+      <h2>${greeting}, ${esc(name)} 🌿</h2>
+      <div class="dash-greeting-sub">${todayStr}</div>
+    </div>`;
+
+  // ── Compute urgency counts ──
+  const overdueCare  = careSchedules.filter(c => c.nextDue && new Date(c.nextDue+'T00:00:00') < today);
+  const dueTodayCare = careSchedules.filter(c => { if (!c.nextDue) return false; return new Date(c.nextDue+'T00:00:00').getTime() === today.getTime(); });
+  const overdueTasks = tasks.filter(t => t.completed !== 'Y' && t.due && new Date(t.due+'T00:00:00') < today);
+  const dueTodayTasks = tasks.filter(t => t.completed !== 'Y' && t.due && new Date(t.due+'T00:00:00').getTime() === today.getTime());
+  const readyPlants  = plants.filter(p => p.status === 'Ready to Harvest');
+
+  // ── Alert pills ──
+  const alerts = [];
+  if (overdueCare.length)   alerts.push(`<button class="dash-alert red"   onclick="switchTab('care')">⚠️ ${overdueCare.length} care overdue</button>`);
+  if (dueTodayCare.length)  alerts.push(`<button class="dash-alert amber"  onclick="switchTab('care')">💧 ${dueTodayCare.length} care due today</button>`);
+  if (overdueTasks.length)  alerts.push(`<button class="dash-alert red"   onclick="switchTab('tasks')">⚠️ ${overdueTasks.length} task${overdueTasks.length!==1?'s':''} overdue</button>`);
+  if (dueTodayTasks.length) alerts.push(`<button class="dash-alert amber"  onclick="switchTab('tasks')">✅ ${dueTodayTasks.length} task${dueTodayTasks.length!==1?'s':''} due today</button>`);
+  if (readyPlants.length)   alerts.push(`<button class="dash-alert green"  onclick="switchTab('plants')">🍅 ${readyPlants.length} ready to harvest</button>`);
+  document.getElementById('dash-alerts').innerHTML = alerts.length
+    ? `<div class="dash-alert-bar">${alerts.join('')}</div>` : '';
+
+  // ── Stats ──
+  const thisYear = new Date().getFullYear();
+  const seasonHarvests = harvests.filter(h => h.date && h.date.startsWith(thisYear));
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="dash-stat"><div class="dash-stat-val">${plants.length}</div><div class="dash-stat-lbl">Plants</div></div>
+    <div class="dash-stat"><div class="dash-stat-val">${seasonHarvests.length}</div><div class="dash-stat-lbl">${thisYear} Harvests</div></div>
+    <div class="dash-stat"><div class="dash-stat-val">${tasks.filter(t=>t.completed!=='Y').length}</div><div class="dash-stat-lbl">Open Tasks</div></div>`;
+
+  // ── Ready to harvest ──
+  const harvestEl = document.getElementById('dash-harvest-ready');
+  if (readyPlants.length) {
+    harvestEl.innerHTML = `
+      <div class="dash-section-title">
+        🍅 Ready to Harvest
+        <button class="dash-see-all" onclick="setBedFilter('All');switchTab('plants')">See all →</button>
+      </div>
+      <div class="dash-row">
+        ${readyPlants.slice(0,5).map(p => `
+          <div class="dash-item">
+            <div class="dash-item-icon">🍅</div>
+            <div class="dash-item-body">
+              <div class="dash-item-title">${esc(p.name)}${p.variety?' · '+esc(p.variety):''}</div>
+              <div class="dash-item-sub">${p.bed ? esc(p.bed) : 'No bed set'}</div>
+            </div>
+            <div class="dash-item-action"><button class="btn-done" onclick="openHarvestModal();setTimeout(()=>{document.getElementById('h-plant').value='${esc(p.name)}'},50)">Log</button></div>
+          </div>`).join('')}
+      </div>`;
+  } else {
+    harvestEl.innerHTML = '';
+  }
+
+  // ── Care due today + overdue ──
+  const urgentCare = [...overdueCare, ...dueTodayCare]
+    .sort((a,b) => (a.nextDue||'').localeCompare(b.nextDue||''));
+  const careEl = document.getElementById('dash-care-due');
+  const typeIcons = { 'Watering':'💧', 'Fertilizing':'🌱', 'Pruning':'✂️', 'Pest Treatment':'🐛' };
+  if (urgentCare.length) {
+    careEl.innerHTML = `
+      <div class="dash-section-title">
+        💧 Care Needed
+        <button class="dash-see-all" onclick="switchTab('care')">See all →</button>
+      </div>
+      <div class="dash-row">
+        ${urgentCare.slice(0,6).map(c => {
+          const due = new Date(c.nextDue+'T00:00:00');
+          const diff = Math.round((due - today) / 86400000);
+          const label = diff < 0 ? `Overdue by ${Math.abs(diff)}d` : 'Due today';
+          const labelColor = diff < 0 ? 'color:var(--red)' : 'color:var(--amber)';
+          return `<div class="dash-item">
+            <div class="dash-item-icon">${typeIcons[c.type]||'🌿'}</div>
+            <div class="dash-item-body">
+              <div class="dash-item-title">${esc(c.plant)}</div>
+              <div class="dash-item-sub" style="${labelColor}">${esc(c.type)} · ${label}</div>
+            </div>
+            <div class="dash-item-action"><button class="btn-done" onclick="markCareDone('${c.id}')">✓</button></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } else {
+    careEl.innerHTML = urgentCare.length === 0 && careSchedules.length > 0
+      ? `<div class="dash-section-title">💧 Care Needed</div><div class="dash-empty-row">All caught up — nothing due today 🎉</div>`
+      : '';
+  }
+
+  // ── Tasks due today + overdue ──
+  const urgentTasks = [...overdueTasks, ...dueTodayTasks]
+    .sort((a,b) => (a.due||'').localeCompare(b.due||''));
+  const tasksEl = document.getElementById('dash-tasks-due');
+  if (urgentTasks.length) {
+    tasksEl.innerHTML = `
+      <div class="dash-section-title">
+        ✅ Tasks Due
+        <button class="dash-see-all" onclick="switchTab('tasks')">See all →</button>
+      </div>
+      <div class="dash-row">
+        ${urgentTasks.slice(0,5).map(t => {
+          const due = new Date(t.due+'T00:00:00');
+          const diff = Math.round((due - today) / 86400000);
+          const label = diff < 0 ? `Overdue by ${Math.abs(diff)}d` : 'Due today';
+          const labelColor = diff < 0 ? 'color:var(--red)' : 'color:var(--amber)';
+          return `<div class="dash-item">
+            <div class="dash-item-icon">✅</div>
+            <div class="dash-item-body">
+              <div class="dash-item-title">${esc(t.title)}</div>
+              <div class="dash-item-sub" style="${labelColor}">${label}</div>
+            </div>
+            <div class="dash-item-action"><button class="btn-done" onclick="toggleTask('${t.id}');renderDashboard()">✓</button></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } else {
+    tasksEl.innerHTML = '';
+  }
 }
 
 // ══════════════════════════════════════════
